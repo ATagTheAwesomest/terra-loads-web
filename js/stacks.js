@@ -1,7 +1,7 @@
 // Stack and item rows in the workspace: active stack, inline rename, move
 // up/down, drag and drop between stacks, weight edits and hold-to-delete.
 
-import { isFlagged, stackTotals, formatWeight } from './model.js';
+import { isFlagged, stackTotals, formatWeight, pieceCounts } from './model.js';
 import {
   activeStack, findItem, findStack, moveItem, moveItemTo, removeItem,
   removeStack, renameStack, setActiveStack, setItemWeight,
@@ -18,8 +18,11 @@ function escapeHtml(s) {
 
 // ---- Rendering -----------------------------------------------------------
 
-function renderItem(it, i) {
+function renderItem(it, i, count) {
   const flagged = isFlagged(it);
+  const countBadge = count
+    ? `<span class="item-count${count.n > count.of ? ' over' : ''}" title="Piece ${count.n} of ${count.of} on the master list">${count.n} of ${count.of}</span> `
+    : '';
   const weight = flagged
     ? `<button class="btn item-weight item-weight-edit" type="button" data-action="weight" title="Set weight">${formatWeight(it.weight)} <span aria-hidden="true">&#9998;</span></button>`
     : `<span class="item-weight">${formatWeight(it.weight)}</span>`;
@@ -28,7 +31,7 @@ function renderItem(it, i) {
       <span class="item-drag" data-drag aria-label="Drag to move" title="Drag to move">&#10303;</span>
       <span class="item-index">${i + 1}</span>
       <span class="item-mark">${escapeHtml(it.mark)}</span>
-      <span class="item-desc">${escapeHtml(it.description || (it.matched ? '' : 'Not in master list'))}</span>
+      <span class="item-desc">${countBadge}${escapeHtml(it.description || (it.matched ? '' : 'Not in master list'))}</span>
       ${weight}
       <span class="item-actions">
         <button class="btn btn-icon" type="button" data-action="up" aria-label="Move up">&#9650;</button>
@@ -38,7 +41,7 @@ function renderItem(it, i) {
     </li>`;
 }
 
-export function renderStack(stack, load) {
+export function renderStack(stack, load, counts = pieceCounts(load)) {
   const t = stackTotals(stack);
   const flagged = stack.items.filter(isFlagged).length;
   const active = activeStack(load) === stack;
@@ -57,13 +60,14 @@ export function renderStack(stack, load) {
         ${canRemove ? '<button class="btn btn-icon btn-hold" type="button" data-hold="stack" aria-label="Hold to remove empty stack" title="Hold to remove empty stack">&#128465;</button>' : ''}
       </header>
       ${stack.items.length
-        ? `<ol class="items">${stack.items.map(renderItem).join('')}</ol>`
+        ? `<ol class="items">${stack.items.map((it, i) => renderItem(it, i, counts.get(it.id))).join('')}</ol>`
         : '<p class="stack-empty">No pieces yet. Scan, or drag pieces here.</p>'}
     </section>`;
 }
 
 export function renderStacks(load) {
-  return load.stacks.map((s) => renderStack(s, load)).join('');
+  const counts = pieceCounts(load);
+  return load.stacks.map((s) => renderStack(s, load, counts)).join('');
 }
 
 // ---- Rename --------------------------------------------------------------

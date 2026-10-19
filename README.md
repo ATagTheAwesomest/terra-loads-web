@@ -38,7 +38,7 @@ Safari tabs after a week of no use, so always run it from the home screen.
 | `js/updater.js` | Service worker registration, version check, Force Update |
 | `sw.js` | Precaches the app shell, serves cache-first offline |
 | `version.js` | The app version (single source of truth) |
-| `data/master_parts.csv` | Master parts: `Mark,Description,Weight` (lbs) |
+| `data/master_parts.csv` | Master parts list (fabrication export, see below) |
 
 ## Data model
 
@@ -73,5 +73,11 @@ offline copy.
 
 ## Master parts list
 
-Replace `data/master_parts.csv` with the real list (same three columns, header
-row required, quote fields that contain commas) and bump the version.
+`data/master_parts.csv` is the fabrication export as-is (`Main Mk`, `Shape`,
+`Dimension`, `Length`, `Grade`, `Qty`, `Ref #`, `Assembly Weight` like
+`581.48#`). Each row shows size, length, grade and ref, uses the assembly
+weight, and shows a running "2 of 4" count against `Qty` (red when over).
+A plain `Mark,Description,Weight` list also works.
+
+To update it, overwrite `data/master_parts.csv` with a new export and bump the
+version. `tests/fixtures/sample_parts.csv` is the small list the tests use.

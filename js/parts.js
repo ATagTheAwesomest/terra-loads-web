@@ -1,4 +1,6 @@
-// Master parts database, bundled as data/master_parts.csv (Mark, Description, Weight).
+// Master parts database, bundled as data/master_parts.csv. Accepts either
+// Mark,Description,Weight or the fabrication export (Main Mk, Shape, Dimension,
+// Length, Grade, Qty, Ref #, Assembly Weight in "123.45#" form).
 
 let parts = new Map();
 
@@ -36,24 +38,45 @@ export async function loadParts(url = 'data/master_parts.csv') {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
   const [header, ...rows] = parseCsv(await res.text());
-  const col = (name) => header.findIndex((h) => h.trim().toLowerCase() === name);
-  const iMark = col('mark');
+  // First header present wins, so both the simple Mark/Description/Weight list
+  // and the fabrication export (Main Mk, Assembly Weight, ...) load as-is.
+  const col = (...names) => {
+    for (const name of names) {
+      const i = header.findIndex((h) => h.trim().toLowerCase() === name);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const get = (r, i) => (i >= 0 ? (r[i] ?? '').trim() : '');
+  const iMark = col('mark', 'main mk');
   const iDesc = col('description');
-  const iWeight = col('weight');
+  const iWeight = col('assembly weight', 'weight');
+  const iShape = col('shape');
+  const iDim = col('dimension');
+  const iLength = col('length');
+  const iGrade = col('grade');
+  const iQty = col('qty');
+  const iRef = col('ref #');
   parts = new Map();
   for (const r of rows) {
-    const mark = normalizeMark(r[iMark]);
+    const mark = normalizeMark(get(r, iMark));
     if (!mark) continue;
+    const size = `${get(r, iShape)}${get(r, iDim).replace(/\s+/g, '')}`;
+    const ref = get(r, iRef);
+    const description = get(r, iDesc)
+      || [size, get(r, iLength), get(r, iGrade), ref && `Ref ${ref}`].filter(Boolean).join(' · ');
     parts.set(mark, {
       mark,
-      description: (r[iDesc] ?? '').trim(),
-      weight: Number.parseFloat(r[iWeight]) || 0,
+      description,
+      weight: Number.parseFloat(get(r, iWeight).replace(/[^\d.]/g, '')) || 0,
+      qty: Number.parseInt(get(r, iQty), 10) || 0,
     });
   }
   return parts.size;
 }
 
-// Exact match lookup. Returns { mark, description, weight } or null.
+// Exact match lookup. Returns { mark, description, weight, qty } or null;
+// qty is 0 when the list doesn't carry it.
 export function lookupPart(mark) {
   return parts.get(normalizeMark(mark)) ?? null;
 }

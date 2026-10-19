@@ -167,6 +167,8 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
 .item-mark { font-family: var(--mono); font-weight: 700; }
 .item-desc { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-weight { font-variant-numeric: tabular-nums; text-align: right; }
+.item-count { display: inline-block; margin-right: 6px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font-variant-numeric: tabular-nums; }
+.item-count.over { border-color: var(--danger); color: var(--danger); font-weight: 700; }
 .item.flagged { background: var(--flag-bg); box-shadow: inset 6px 0 0 var(--flag); }
 .item.flagged .item-mark { color: var(--flag); }
 .stack-empty { padding: 14px; color: var(--text-muted); }

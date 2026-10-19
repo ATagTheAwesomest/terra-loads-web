@@ -11,7 +11,7 @@ import {
 } from '../js/ops.js';
 
 before(async () => {
-  const csv = await readFile(new URL('../data/master_parts.csv', import.meta.url), 'utf8');
+  const csv = await readFile(new URL('./fixtures/sample_parts.csv', import.meta.url), 'utf8');
   globalThis.fetch = async () => new Response(csv);
   await loadParts();
 });

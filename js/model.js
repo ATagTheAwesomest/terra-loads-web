@@ -77,6 +77,25 @@ export function loadSequences(load) {
   return [...seqs].sort();
 }
 
+// Running count of each master mark across the load, in stack then scan
+// order, against the quantity the master list calls for.
+// Returns Map(itemId -> { n, of }) for items whose mark has a quantity.
+export function pieceCounts(load) {
+  const seen = new Map();
+  const counts = new Map();
+  for (const s of load?.stacks ?? []) {
+    for (const it of s.items) {
+      const base = it.mark.replace(/-+$/, '');
+      const qty = lookupPart(base)?.qty;
+      if (!qty) continue;
+      const n = (seen.get(base) ?? 0) + 1;
+      seen.set(base, n);
+      counts.set(it.id, { n, of: qty });
+    }
+  }
+  return counts;
+}
+
 export function formatWeight(lbs) {
   return `${Math.round(lbs).toLocaleString('en-US')} lbs`;
 }
