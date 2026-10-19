@@ -1,7 +1,10 @@
 // App shell: boot sequence, header stats, loads drawer, new-load flow, updates.
 
 import { loadParts, partCount } from './parts.js';
-import { JOB_NUMBERS, createLoad, jobLabel, loadSequences, loadTotals, formatWeight, refreshPieceWeights } from './model.js';
+import { JOB_NUMBERS, createLoad, jobHasSequences, jobLabel, loadSequences, loadTotals, formatWeight, refreshPieceWeights } from './model.js';
+import { enterCheck, initCheck, renderCheck, submitCheck } from './check-ui.js';
+import { checkSummary } from './check.js';
+import { initLayout, isMobile, renderStacksMobile } from './mobile.js';
 import { focusScanner, initScanner, renderScanbar } from './scanner.js';
 import { initStacks, renderStacks } from './stacks.js';
 import * as store from './store.js';
@@ -9,9 +12,17 @@ import { APP_VERSION, checkForUpdate, forceUpdate, registerServiceWorker } from 
 
 const $ = (sel) => document.querySelector(sel);
 
+const MODE_KEY = 'terra.mode';
+
 export const state = {
   load: null,
+  // 'load' scans pieces into stacks; 'check' checks them off on the truck.
+  mode: localStorage.getItem(MODE_KEY) === 'check' ? 'check' : 'load',
 };
+
+export function isChecking() {
+  return Boolean(state.load) && state.mode === 'check';
+}
 
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,14 +50,19 @@ export function renderStats() {
   $('#stat-load').textContent = load?.name ?? '—';
   $('#stat-job').textContent = load ? jobLabel(load) : '';
   $('#stat-job').classList.toggle('missing', Boolean(load && !load.job));
-  $('#stat-seq').textContent = seqs.length ? seqs.join(', ') : '—';
+  const noSeqJob = load && !jobHasSequences(load.job);
+  $('#stat-seq').textContent = seqs.length ? seqs.join(', ') : noSeqJob ? 'None' : '—';
+  $('#stat-seq').classList.toggle('muted', Boolean(noSeqJob));
+  $('#mode-badge').hidden = !isChecking();
+  document.body.classList.toggle('mode-check', isChecking());
+  $('#truck-check-label').textContent = isChecking() ? 'Back to loading' : 'Truck check';
   $('#stat-pieces').textContent = totals.pieces.toLocaleString('en-US');
   $('#stat-weight').textContent = formatWeight(totals.weight);
 }
 
 export function renderWorkspace() {
   const ws = $('#workspace');
-  $('#colhead').hidden = !state.load;
+  $('#colhead').hidden = !state.load || isChecking() || isMobile();
   if (!state.load) {
     ws.innerHTML = `
       <div class="empty">
@@ -56,7 +72,26 @@ export function renderWorkspace() {
       </div>`;
     return;
   }
-  ws.innerHTML = renderStacks(state.load);
+  if (isChecking()) ws.innerHTML = renderCheck(state.load);
+  else ws.innerHTML = isMobile() ? renderStacksMobile(state.load) : renderStacks(state.load);
+}
+
+// Switches between loading ('load') and the truck check ('check').
+export async function setMode(mode) {
+  const next = mode === 'check' ? 'check' : 'load';
+  if (next === 'check' && !state.load) {
+    toast('Open a load first');
+    return;
+  }
+  state.mode = next;
+  localStorage.setItem(MODE_KEY, next);
+  if (next === 'check' && !state.load.truckCheck) {
+    enterCheck(state.load);
+    await saveCurrentLoad();
+  } else render();
+  document.getElementById('workspace').scrollTop = 0;
+  focusScanner();
+  toast(next === 'check' ? `Truck check: scan every piece of ${state.load.name}` : 'Back to loading');
 }
 
 export function render() {
@@ -102,6 +137,7 @@ async function renderLoadList() {
     return `<li><button class="btn load-row${l.id === state.load?.id ? ' active' : ''}" type="button" data-load-id="${l.id}">
       <span>${escapeHtml(l.name)}</span>
       <span class="load-row-meta">${escapeHtml(jobLabel(l))} &middot; ${t.pieces} pcs &middot; ${formatWeight(t.weight)} &middot; ${when}</span>
+      ${checkSummary(l) ? `<span class="load-row-meta check-meta-line">${escapeHtml(checkSummary(l))}</span>` : ''}
     </button></li>`;
   }).join('');
 }
@@ -211,9 +247,16 @@ function renderJobChoices() {
 
 function bindEvents() {
   renderJobChoices();
-  const ctx = { get load() { return state.load; }, save: saveCurrentLoad, render, toast };
+  const ctx = {
+    get load() { return state.load; },
+    get checking() { return isChecking(); },
+    save: saveCurrentLoad, render, toast, setMode, checkScan: submitCheck,
+  };
+  initLayout(render);
   initScanner(ctx);
   initStacks(ctx);
+  initCheck(ctx);
+  $('#btn-truck-check').addEventListener('click', () => setMode(isChecking() ? 'load' : 'check'));
   $('#btn-loads').addEventListener('click', () => setDrawer(true));
   $('#btn-drawer-close').addEventListener('click', () => setDrawer(false));
   $('#scrim').addEventListener('click', () => { setDrawer(false); setMenu(false); });

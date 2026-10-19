@@ -11,13 +11,14 @@ import {
 import { focusScanner, openKeypad } from './scanner.js';
 import { bindHold } from './hold.js';
 
-const ITEM_HOLD_MS = 1500;
-const STACK_HOLD_MS = 4000;
+export const ITEM_HOLD_MS = 1500;
+export const STACK_HOLD_MS = 4000;
 
 let ctx = null;
-const expanded = new Set(); // item ids showing their detail panel
+// Item ids showing their detail panel. Shared with the phone layout.
+export const expanded = new Set();
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
@@ -29,8 +30,8 @@ function formatScanTime(iso) {
     : d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' });
 }
 
-function renderDetail(it, count) {
-  const part = lookupPart(it.mark.replace(/-+$/, ''));
+export function renderDetail(it, count, job) {
+  const part = lookupPart(it.mark.replace(/-+$/, ''), job);
   const rows = [
     ['Scanned', formatScanTime(it.scannedAt)],
     ['Piece weight', formatWeight(it.weight)],
@@ -42,7 +43,7 @@ function renderDetail(it, count) {
   return `<dl class="item-detail">${rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>`;
 }
 
-function renderItem(it, i, count) {
+function renderItem(it, i, count, job) {
   const flagged = isFlagged(it);
   const countBadge = count
     ? `<span class="item-count${count.n > count.of ? ' over' : ''}" title="Piece ${count.n} of ${count.of} on the master list">${count.n} of ${count.of}</span> `
@@ -62,7 +63,7 @@ function renderItem(it, i, count) {
         <button class="btn btn-icon" type="button" data-action="down" aria-label="Move down">&#9660;</button>
         <button class="btn btn-icon btn-hold" type="button" data-hold="item" data-hold-ms="${ITEM_HOLD_MS}" aria-label="Hold to delete" title="Hold to delete">&#128465;</button>
       </span>
-      ${expanded.has(it.id) ? renderDetail(it, count) : ''}
+      ${expanded.has(it.id) ? renderDetail(it, count, job) : ''}
     </li>`;
 }
 
@@ -84,7 +85,7 @@ export function renderStack(stack, load, counts = pieceCounts(load)) {
         <button class="btn btn-icon btn-hold" type="button" data-hold="stack" data-hold-ms="${STACK_HOLD_MS}" aria-label="Hold 4 seconds to delete stack" title="Hold 4 seconds to delete stack">&#128465;</button>
       </header>
       ${stack.items.length
-        ? `<ol class="items">${stack.items.map((it, i) => renderItem(it, i, counts.get(it.id))).join('')}</ol>`
+        ? `<ol class="items">${stack.items.map((it, i) => renderItem(it, i, counts.get(it.id), load.job)).join('')}</ol>`
         : '<p class="stack-empty">No pieces yet. Scan, or drag pieces here.</p>'}
     </section>`;
 }
@@ -275,6 +276,7 @@ export function initStacks(context) {
   });
 
   bindHold(ws, {
+    selector: '[data-hold="item"], [data-hold="stack"]',
     onComplete: completeHold,
     onTap: (btn, secs) => ctx.toast(`Hold for ${secs} seconds to delete${btn.dataset.hold === 'stack' ? ' this stack and its pieces' : ''}.`),
   });

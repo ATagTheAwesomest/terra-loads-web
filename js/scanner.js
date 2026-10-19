@@ -36,26 +36,34 @@ function renderFocusState() {
 
 // ---- Scanning ------------------------------------------------------------
 
-function flash(el, flagged) {
+const FLASH = { ok: 'flash-ok', flag: 'flash-flag', bad: 'flash-bad' };
+
+function flash(el, kind) {
   if (!el) return;
-  const cls = flagged ? 'flash-flag' : 'flash-ok';
-  el.classList.remove('flash-ok', 'flash-flag');
+  el.classList.remove(...Object.values(FLASH));
   void el.offsetWidth; // restart the animation on back-to-back scans
-  el.classList.add(cls);
+  el.classList.add(FLASH[kind]);
 }
 
-// Adds one mark to the active stack, saves, and shows feedback.
+// Green, orange or red pulse on a row, the scan bar and the whole screen.
+export function flashFeedback(kind, row) {
+  flash(row, kind);
+  flash($('#scanbar'), kind);
+  flash($('#screen-flash'), kind);
+}
+
+// Adds one mark to the active stack, saves, and shows feedback. During a
+// truck check the mark checks a piece off instead.
 export function submitMark(raw, { manual = false } = {}) {
   const load = ctx.load;
   if (!load) return null;
+  if (ctx.checking) return ctx.checkScan(raw, { manual });
   const item = addScan(load, raw, { manual });
   if (!item) return null;
   ctx.save();
   const row = document.querySelector(`[data-item-id="${item.id}"]`);
   row?.scrollIntoView({ block: 'nearest' });
-  flash(row, isFlagged(item));
-  flash($('#scanbar'), isFlagged(item));
-  flash($('#screen-flash'), isFlagged(item));
+  flashFeedback(isFlagged(item) ? 'flag' : 'ok', row);
   return item;
 }
 
@@ -72,7 +80,12 @@ export function renderScanbar() {
   const load = ctx.load;
   $('#scanbar').hidden = !load;
   if (!load) return;
-  $('#scan-stack').textContent = activeStack(load)?.name ?? '—';
+  const checking = ctx.checking;
+  $('#scanbar').classList.toggle('checking', checking);
+  $('#scan-label').textContent = checking ? 'Truck check' : 'Scanning into';
+  $('#scan-stack').textContent = checking ? load.name : activeStack(load)?.name ?? '—';
+  $('#btn-new-stack').hidden = checking;
+  $('#btn-check-done').hidden = !checking;
 }
 
 // ---- On-screen keypad ----------------------------------------------------
@@ -141,7 +154,9 @@ export function openKeypad({ mode = 'mark', title, note = '', initial = '', okLa
 async function manualEntry() {
   const value = await openKeypad({
     mode: 'mark',
-    note: 'Manual marks get a trailing “-” and show orange.',
+    title: ctx.checking ? 'Check a mark' : undefined,
+    okLabel: ctx.checking ? 'Check' : undefined,
+    note: ctx.checking ? 'Checks off one piece with this mark.' : 'Manual marks get a trailing “-” and show orange.',
   });
   if (value) submitMark(value, { manual: true });
   focusScanner();
@@ -181,6 +196,7 @@ export function initScanner(context) {
   document.addEventListener('close', () => setTimeout(focusScanner, 0), true);
 
   $('#btn-keypad').addEventListener('click', manualEntry);
+  $('#btn-check-done').addEventListener('click', () => ctx.setMode('load'));
   $('#btn-new-stack').addEventListener('click', () => {
     if (!ctx.load) return;
     const stack = addStack(ctx.load);

@@ -123,7 +123,7 @@ test('job numbers are limited to the known list', () => {
   assert.equal(setLoadJob(load, '26102 - 25-351'), false);
   assert.equal(setLoadJob(load, 'bogus'), false);
   assert.equal(load.job, '26102 - 25-351');
-  assert.deepEqual(JOB_NUMBERS, ['26123 - 25-418', '26102 - 25-351']);
+  assert.deepEqual(JOB_NUMBERS, ['26123 - 25-418', '26102 - 25-351', '26111']);
 });
 
 test('remove item and weight edits', () => {

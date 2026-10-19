@@ -4,16 +4,25 @@
 // Stack { id, name, items: Item[] }
 // Item  { id, mark, description, weight, matched, manual, scannedAt }
 //
-// Items are never collapsed: every scan is its own row, in scan order.
+// Items are never collapsed: every scan is its own row, in scan order. Marks
+// are looked up on the load's job, since the same mark on two jobs is two
+// different parts.
 
-import { lookupPart, normalizeMark } from './parts.js';
+import { jobKey, lookupPart, normalizeMark } from './parts.js';
 
 // Job numbers a load can be filed under. A load saved before jobs existed has
 // job null until one is picked on the Manage Loads screen.
-export const JOB_NUMBERS = ['26123 - 25-418', '26102 - 25-351'];
+export const JOB_NUMBERS = ['26123 - 25-418', '26102 - 25-351', '26111'];
+
+// Jobs whose marks carry no sequence number, so the sequence list stays empty.
+export const NO_SEQUENCE_JOBS = ['26111'];
 
 export function isJobNumber(job) {
   return JOB_NUMBERS.includes(job);
+}
+
+export function jobHasSequences(job) {
+  return !NO_SEQUENCE_JOBS.includes(jobKey(job));
 }
 
 export function jobLabel(load) {
@@ -43,9 +52,9 @@ export function createLoad(name, job = null) {
 
 // Builds an item from a scanned or typed mark. Unrecognized marks and manual
 // entries are flagged: the mark gets a trailing "-" and the row shows orange.
-export function createItem(rawMark, { manual = false } = {}) {
+export function createItem(rawMark, { manual = false, job = null } = {}) {
   let mark = normalizeMark(rawMark);
-  const part = lookupPart(mark) ?? lookupPart(mark.replace(/-+$/, ''));
+  const part = lookupPart(mark, job) ?? lookupPart(mark.replace(/-+$/, ''), job);
   const flagged = manual || !part;
   if (flagged && !mark.endsWith('-')) mark += '-';
   return {
@@ -66,7 +75,7 @@ export function refreshPieceWeights(load) {
   if (!load || load.pieceWeights) return false;
   for (const s of load.stacks) {
     for (const it of s.items) {
-      const part = !isFlagged(it) && lookupPart(it.mark);
+      const part = !isFlagged(it) && lookupPart(it.mark, load.job);
       if (part) it.weight = part.weight;
     }
   }
@@ -96,8 +105,10 @@ export function loadTotals(load) {
 }
 
 // Unique 4-character sequence prefixes of every mark in the load, sorted.
+// Empty for a job without sequences.
 export function loadSequences(load) {
   const seqs = new Set();
+  if (!jobHasSequences(load?.job)) return [];
   for (const s of load?.stacks ?? []) {
     for (const it of s.items) {
       const prefix = it.mark.slice(0, 4);
@@ -108,7 +119,7 @@ export function loadSequences(load) {
 }
 
 // Running count of each master mark across the load, in stack then scan
-// order, against the quantity the master list calls for.
+// order, against the quantity the master list calls for on the load's job.
 // Returns Map(itemId -> { n, of }) for items whose mark has a quantity.
 export function pieceCounts(load) {
   const seen = new Map();
@@ -116,7 +127,7 @@ export function pieceCounts(load) {
   for (const s of load?.stacks ?? []) {
     for (const it of s.items) {
       const base = it.mark.replace(/-+$/, '');
-      const qty = lookupPart(base)?.qty;
+      const qty = lookupPart(base, load.job)?.qty;
       if (!qty) continue;
       const n = (seen.get(base) ?? 0) + 1;
       seen.set(base, n);

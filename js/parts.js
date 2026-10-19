@@ -3,8 +3,23 @@
 // Length, Grade, Qty, Ref #, Assembly Weight in "123.45#" form). In the export
 // the weight columns total the whole line (every piece of that mark), so the
 // per-piece weight is Assembly Weight / Qty.
+//
+// A mark is only unique within a job: P1 on one job is a different part from
+// P1 on another. Parts are keyed "<job>|<mark>". When the list has a Job column
+// each row is filed under its job; rows without one (the current file) have an
+// empty job and match a mark on any job.
 
 let parts = new Map();
+
+// The job number a part or load is filed under, reduced to its leading number
+// so "26123 - 25-418" in the app and "26123" in the spreadsheet agree.
+export function jobKey(job) {
+  return String(job ?? '').trim().toUpperCase().split(/\s+/)[0] ?? '';
+}
+
+export function partKey(job, mark) {
+  return `${jobKey(job)}|${normalizeMark(mark)}`;
+}
 
 export function normalizeMark(mark) {
   return String(mark ?? '').trim().toUpperCase();
@@ -51,6 +66,7 @@ export async function loadParts(url = 'data/master_parts.csv') {
   };
   const get = (r, i) => (i >= 0 ? (r[i] ?? '').trim() : '');
   const iMark = col('mark', 'main mk');
+  const iJob = col('job', 'job #', 'job number', 'job no', 'job no.');
   const iDesc = col('description');
   const iWeight = col('assembly weight', 'weight');
   const iShape = col('shape');
@@ -64,14 +80,16 @@ export async function loadParts(url = 'data/master_parts.csv') {
   for (const r of rows) {
     const mark = normalizeMark(get(r, iMark));
     if (!mark) continue;
+    const job = jobKey(get(r, iJob));
     const size = `${get(r, iShape)}${get(r, iDim).replace(/\s+/g, '')}`;
     const ref = get(r, iRef);
     const description = get(r, iDesc)
       || [size, get(r, iLength), get(r, iGrade), ref && `Ref ${ref}`].filter(Boolean).join(' · ');
     const qty = Number.parseInt(get(r, iQty), 10) || 0;
     const lineWeight = num(get(r, iWeight));
-    parts.set(mark, {
+    parts.set(partKey(job, mark), {
       mark,
+      job,
       description,
       weight: qty > 1 ? Math.round((lineWeight / qty) * 100) / 100 : lineWeight,
       lineWeight,
@@ -83,10 +101,13 @@ export async function loadParts(url = 'data/master_parts.csv') {
   return parts.size;
 }
 
-// Exact match lookup. Returns { mark, description, weight, lineWeight, qty,
-// fields } or null; weight is per piece, qty is 0 when the list doesn't carry it.
-export function lookupPart(mark) {
-  return parts.get(normalizeMark(mark)) ?? null;
+// Exact match lookup of a mark on a job. Returns { mark, job, description,
+// weight, lineWeight, qty, fields } or null; weight is per piece, qty is 0 when
+// the list doesn't carry it. A row filed under the job wins; a row with no job
+// matches any job.
+export function lookupPart(mark, job = null) {
+  const j = jobKey(job);
+  return (j && parts.get(partKey(j, mark))) || parts.get(partKey('', mark)) || null;
 }
 
 export function partCount() {

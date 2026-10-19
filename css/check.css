@@ -1,0 +1,127 @@
+/* Truck check screen (js/check-ui.js). Tablet first; css/mobile.css adjusts it
+   for the phone layout. */
+
+:root {
+  --bad: #ff3b3b;            /* scan not on the load */
+  --bad-bg: #3a0d0d;
+  --ok-bg: #0f2e1c;
+}
+
+/* Red pulse for a scan that isn't on the load. */
+@keyframes flash-bad {
+  0% { box-shadow: inset 0 0 0 4px var(--bad), 0 0 24px rgba(255, 59, 59, 0.6); }
+  100% { box-shadow: inset 0 0 0 0 transparent, 0 0 0 transparent; }
+}
+.flash-bad { animation: flash-bad 600ms ease-out; }
+.screen-flash.flash-bad { animation: screen-glow 700ms ease-out; background: rgba(255, 59, 59, 0.25); box-shadow: inset 0 0 160px 40px rgba(255, 59, 59, 0.6); }
+
+/* Header and scan bar while checking */
+.mode-badge {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--ok);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mode-badge[hidden] { display: none; }
+body.mode-check .topbar { border-bottom-color: var(--ok); }
+.scanbar.checking .scan-stack { color: var(--ok); }
+.scanbar [hidden] { display: none; }
+.stat-value.muted { color: var(--text-muted); font-weight: 600; }
+.check-meta-line { color: var(--ok); }
+
+/* Summary card */
+.check-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--surface-1);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+.check-count { display: flex; flex-direction: column; }
+.check-big { font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.check-big b { color: var(--ok); }
+.check-meta { display: flex; gap: 20px; justify-content: flex-end; font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.check-missing { color: var(--flag); }
+.check-extra { color: var(--bad); }
+.check-none { color: var(--text-muted); font-weight: 600; }
+.check-bar { grid-column: 1 / -1; height: 14px; border-radius: 7px; background: var(--surface-3); overflow: hidden; }
+.check-bar > span { display: block; height: 100%; background: var(--ok); transition: width 200ms ease-out; }
+.check-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--gap); }
+.check-actions .btn-hold { margin-left: auto; }
+.check-banner { grid-column: 1 / -1; margin: 0; padding: 12px 16px; border-radius: var(--radius); font-weight: 700; font-size: 1.1rem; }
+.check-banner.ok { background: var(--ok-bg); border: 2px solid var(--ok); color: var(--ok); }
+.check-banner.bad { background: var(--bad-bg); border: 2px solid var(--bad); color: var(--bad); }
+.check-empty { height: auto; padding: 40px 0; }
+
+/* Checklist, one card per stack */
+.check-stack {
+  background: var(--surface-1);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.check-stack.complete { border-color: var(--ok); }
+.check-extras { border-color: var(--bad); }
+.check-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-height: var(--tap);
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--border);
+}
+.check-stack.complete .check-head { background: var(--ok-bg); }
+.check-extras .check-head { background: var(--bad-bg); color: var(--bad); }
+.check-rows { list-style: none; margin: 0; padding: 0; }
+.check-row {
+  display: grid;
+  grid-template-columns: var(--tap) 9em minmax(0, 1fr) 7em var(--tap);
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+.check-row:last-child { border-bottom: 0; }
+.check-tick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-radius: 8px;
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+.check-mark { font-family: var(--mono); font-weight: 700; font-size: 1.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check-desc { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check-time { color: var(--text-muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.check-row.flagged .check-mark { color: var(--flag); }
+.check-row.done { background: var(--ok-bg); }
+.check-row.done .check-tick { border-color: var(--ok); background: var(--ok); color: #000; }
+.check-row.done .check-mark { color: var(--ok); }
+.check-row.extra { background: var(--bad-bg); }
+.check-row.extra .check-tick { border-color: var(--bad); background: var(--bad); color: #000; }
+.check-row.extra .check-mark, .check-row.extra .check-desc { color: var(--bad); }
+
+@media (max-width: 900px) {
+  .check-row { grid-template-columns: var(--tap) 8em minmax(0, 1fr) 5.5em var(--tap); padding: 0 8px; }
+}
+
+@media print {
+  .check-summary, .check-stack, .mode-badge { display: none !important; }
+}
