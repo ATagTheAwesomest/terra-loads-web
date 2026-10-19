@@ -1,0 +1,130 @@
+/* Shipping ticket: hidden on screen, the only thing on paper. */
+#print-ticket {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body > *:not(#print-ticket) {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  #print-ticket {
+    display: block;
+    font: 11pt/1.3 Helvetica, Arial, sans-serif;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #print-ticket h1 {
+    margin: 0 0 8pt;
+    font-size: 20pt;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
+    border-bottom: 2pt solid #000;
+  }
+
+  #print-ticket .pt-summary {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2pt 12pt;
+    margin: 0 0 12pt;
+  }
+
+  #print-ticket .pt-summary dt {
+    font-weight: bold;
+  }
+
+  #print-ticket .pt-summary dd {
+    margin: 0;
+  }
+
+  #print-ticket .pt-stack {
+    margin: 0 0 12pt;
+    break-inside: auto;
+  }
+
+  #print-ticket h2 {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 4pt;
+    font-size: 13pt;
+    break-after: avoid;
+  }
+
+  #print-ticket h2 span {
+    font-weight: normal;
+  }
+
+  #print-ticket table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #print-ticket th,
+  #print-ticket td {
+    border: 1pt solid #000;
+    padding: 2pt 4pt;
+    text-align: left;
+  }
+
+  #print-ticket thead th {
+    background: #000;
+    color: #fff;
+  }
+
+  #print-ticket thead {
+    display: table-header-group;
+  }
+
+  #print-ticket tr {
+    break-inside: avoid;
+  }
+
+  #print-ticket tfoot td {
+    font-weight: bold;
+  }
+
+  #print-ticket .pt-num {
+    text-align: right;
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  #print-ticket .pt-check {
+    width: 18pt;
+    text-align: center;
+  }
+
+  #print-ticket .pt-mark {
+    font-family: "Courier New", monospace;
+    font-weight: bold;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  /* Unmatched / manual marks: no colour on paper, so italicise and underline them. */
+  #print-ticket .pt-unmatched .pt-mark {
+    font-style: italic;
+    text-decoration: underline;
+  }
+
+  #print-ticket .pt-signoff {
+    margin-top: 18pt;
+    break-inside: avoid;
+  }
+
+  #print-ticket .pt-signoff p {
+    margin: 10pt 0 0;
+  }
+}
