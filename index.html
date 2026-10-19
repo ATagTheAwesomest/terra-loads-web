@@ -34,6 +34,19 @@
     </button>
   </header>
 
+  <section class="scanbar unfocused" id="scanbar" hidden>
+    <label class="scan-field" for="scan-input">
+      <span class="scan-meta">
+        <span class="stat-label">Scanning into</span>
+        <span class="scan-stack" id="scan-stack">&mdash;</span>
+        <span class="scan-hint" id="scan-hint">Tap here to resume scanning</span>
+      </span>
+      <input id="scan-input" type="text" inputmode="none" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" aria-label="Scan or type a mark">
+    </label>
+    <button class="btn btn-lg" id="btn-keypad" type="button"><span class="icon" aria-hidden="true">&#9783;</span><span>Keypad</span></button>
+    <button class="btn btn-lg btn-primary" id="btn-new-stack" type="button">+ New Stack</button>
+  </section>
+
   <main class="workspace" id="workspace"></main>
 
   <footer class="statusbar">
@@ -73,6 +86,20 @@
     <div class="modal-actions">
       <button class="btn" type="button" id="btn-update-cancel">Close</button>
       <button class="btn btn-primary" type="button" id="btn-update-go">Force Update</button>
+    </div>
+  </dialog>
+
+  <dialog class="modal keypad" id="dlg-keypad">
+    <h2 id="keypad-title">Manual entry</h2>
+    <div class="keypad-display placeholder" id="keypad-display" aria-live="polite">Type a mark</div>
+    <p class="muted keypad-note" id="keypad-note"></p>
+    <div class="keypad-body">
+      <div class="keypad-digits" id="keypad-digits"></div>
+      <div class="keypad-letters" id="keypad-letters"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-lg" type="button" id="keypad-cancel">Cancel</button>
+      <button class="btn btn-lg btn-primary" type="button" id="keypad-ok">Add</button>
     </div>
   </dialog>
 
