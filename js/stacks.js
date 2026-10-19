@@ -1,6 +1,8 @@
 // Stack and item rows in the workspace: active stack, inline rename, move
-// up/down, drag and drop between stacks, weight edits and hold-to-delete.
+// up/down, drag and drop between stacks, weight edits, hold-to-delete, and
+// tap-to-expand piece details.
 
+import { lookupPart } from './parts.js';
 import { isFlagged, stackTotals, formatWeight, pieceCounts } from './model.js';
 import {
   activeStack, findItem, findStack, moveItem, moveItemTo, removeItem,
@@ -11,12 +13,32 @@ import { focusScanner, openKeypad } from './scanner.js';
 const HOLD_MS = 1500;
 
 let ctx = null;
+const expanded = new Set(); // item ids showing their detail panel
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ---- Rendering -----------------------------------------------------------
+
+function formatScanTime(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—'
+    : d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' });
+}
+
+function renderDetail(it, count) {
+  const part = lookupPart(it.mark.replace(/-+$/, ''));
+  const rows = [
+    ['Scanned', formatScanTime(it.scannedAt)],
+    ['Piece weight', formatWeight(it.weight)],
+  ];
+  if (count) rows.push(['Piece', `${count.n} of ${count.of}`]);
+  if (it.manual) rows.push(['Entry', 'Typed on keypad']);
+  if (!part) rows.push(['Master list', 'Not found']);
+  for (const [label, value] of part?.fields ?? []) rows.push([label, value]);
+  return `<dl class="item-detail">${rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>`;
+}
 
 function renderItem(it, i, count) {
   const flagged = isFlagged(it);
@@ -27,7 +49,7 @@ function renderItem(it, i, count) {
     ? `<button class="btn item-weight item-weight-edit" type="button" data-action="weight" title="Set weight">${formatWeight(it.weight)} <span aria-hidden="true">&#9998;</span></button>`
     : `<span class="item-weight">${formatWeight(it.weight)}</span>`;
   return `
-    <li class="item${flagged ? ' flagged' : ''}" data-item-id="${it.id}">
+    <li class="item${flagged ? ' flagged' : ''}${expanded.has(it.id) ? ' expanded' : ''}" data-item-id="${it.id}">
       <span class="item-drag" data-drag aria-label="Drag to move" title="Drag to move">&#10303;</span>
       <span class="item-index">${i + 1}</span>
       <span class="item-mark">${escapeHtml(it.mark)}</span>
@@ -38,6 +60,7 @@ function renderItem(it, i, count) {
         <button class="btn btn-icon" type="button" data-action="down" aria-label="Move down">&#9660;</button>
         <button class="btn btn-icon btn-hold" type="button" data-hold="item" aria-label="Hold to delete" title="Hold to delete">&#128465;</button>
       </span>
+      ${expanded.has(it.id) ? renderDetail(it, count) : ''}
     </li>`;
 }
 
@@ -232,7 +255,16 @@ export function initStacks(context) {
 
   ws.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
-    if (!btn || !ctx.load) return;
+    if (!ctx.load) return;
+    if (!btn) {
+      // Tapping a row anywhere but its controls opens or closes its details.
+      const row = e.target.closest('[data-item-id]');
+      if (!row || e.target.closest('button, [data-drag]')) return;
+      const id = row.dataset.itemId;
+      if (!expanded.delete(id)) expanded.add(id);
+      ctx.render();
+      return;
+    }
     const stackEl = btn.closest('[data-stack-id]');
     const itemId = btn.closest('[data-item-id]')?.dataset.itemId;
     switch (btn.dataset.action) {

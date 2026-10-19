@@ -1,7 +1,7 @@
 // App shell: boot sequence, header stats, loads drawer, new-load flow, updates.
 
 import { loadParts, partCount } from './parts.js';
-import { createLoad, loadSequences, loadTotals, formatWeight } from './model.js';
+import { createLoad, loadSequences, loadTotals, formatWeight, refreshPieceWeights } from './model.js';
 import { focusScanner, initScanner, renderScanbar } from './scanner.js';
 import { initStacks, renderStacks } from './stacks.js';
 import * as store from './store.js';
@@ -39,6 +39,7 @@ export function renderStats() {
 
 export function renderWorkspace() {
   const ws = $('#workspace');
+  $('#colhead').hidden = !state.load;
   if (!state.load) {
     ws.innerHTML = `
       <div class="empty">
@@ -61,6 +62,7 @@ export function render() {
 
 export async function openLoad(id) {
   state.load = id ? await store.getLoad(id) : null;
+  if (partCount() && refreshPieceWeights(state.load)) store.saveLoad(state.load).catch(console.error);
   store.setActiveLoadId(state.load?.id ?? null);
   render();
   focusScanner();
@@ -105,6 +107,14 @@ function setDrawer(open) {
   if (open) renderLoadList();
 }
 
+// Right-hand menu: share, print, update.
+export function setMenu(open) {
+  $('#menu').classList.toggle('open', open);
+  $('#menu').setAttribute('aria-hidden', String(!open));
+  $('#btn-menu').setAttribute('aria-expanded', String(open));
+  $('#scrim').hidden = !open;
+}
+
 function showNewLoadDialog() {
   setDrawer(false);
   $('#input-load-name').value = '';
@@ -140,6 +150,7 @@ async function submitNewLoad(event) {
 async function refreshUpdateBadge() {
   const check = await checkForUpdate();
   $('#update-badge').hidden = !check?.available;
+  $('#menu-badge').hidden = !check?.available;
   return check;
 }
 
@@ -185,7 +196,10 @@ function bindEvents() {
   initStacks(ctx);
   $('#btn-loads').addEventListener('click', () => setDrawer(true));
   $('#btn-drawer-close').addEventListener('click', () => setDrawer(false));
-  $('#scrim').addEventListener('click', () => setDrawer(false));
+  $('#scrim').addEventListener('click', () => { setDrawer(false); setMenu(false); });
+  $('#btn-menu').addEventListener('click', () => setMenu(true));
+  $('#btn-menu-close').addEventListener('click', () => setMenu(false));
+  $('#menu').addEventListener('click', (e) => { if (e.target.closest('.menu-item')) setMenu(false); });
   $('#btn-new-load-drawer').addEventListener('click', showNewLoadDialog);
   $('#load-list').addEventListener('click', async (e) => {
     const row = e.target.closest('[data-load-id]');

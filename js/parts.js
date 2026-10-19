@@ -1,6 +1,8 @@
 // Master parts database, bundled as data/master_parts.csv. Accepts either
 // Mark,Description,Weight or the fabrication export (Main Mk, Shape, Dimension,
-// Length, Grade, Qty, Ref #, Assembly Weight in "123.45#" form).
+// Length, Grade, Qty, Ref #, Assembly Weight in "123.45#" form). In the export
+// the weight columns total the whole line (every piece of that mark), so the
+// per-piece weight is Assembly Weight / Qty.
 
 let parts = new Map();
 
@@ -57,6 +59,7 @@ export async function loadParts(url = 'data/master_parts.csv') {
   const iGrade = col('grade');
   const iQty = col('qty');
   const iRef = col('ref #');
+  const num = (v) => Number.parseFloat(v.replace(/[^\d.]/g, '')) || 0;
   parts = new Map();
   for (const r of rows) {
     const mark = normalizeMark(get(r, iMark));
@@ -65,18 +68,23 @@ export async function loadParts(url = 'data/master_parts.csv') {
     const ref = get(r, iRef);
     const description = get(r, iDesc)
       || [size, get(r, iLength), get(r, iGrade), ref && `Ref ${ref}`].filter(Boolean).join(' · ');
+    const qty = Number.parseInt(get(r, iQty), 10) || 0;
+    const lineWeight = num(get(r, iWeight));
     parts.set(mark, {
       mark,
       description,
-      weight: Number.parseFloat(get(r, iWeight).replace(/[^\d.]/g, '')) || 0,
-      qty: Number.parseInt(get(r, iQty), 10) || 0,
+      weight: qty > 1 ? Math.round((lineWeight / qty) * 100) / 100 : lineWeight,
+      lineWeight,
+      qty,
+      // Every non-empty column, for the expanded row view.
+      fields: header.map((h, i) => [h.trim(), get(r, i)]).filter(([h, v]) => h && v),
     });
   }
   return parts.size;
 }
 
-// Exact match lookup. Returns { mark, description, weight, qty } or null;
-// qty is 0 when the list doesn't carry it.
+// Exact match lookup. Returns { mark, description, weight, lineWeight, qty,
+// fields } or null; weight is per piece, qty is 0 when the list doesn't carry it.
 export function lookupPart(mark) {
   return parts.get(normalizeMark(mark)) ?? null;
 }
