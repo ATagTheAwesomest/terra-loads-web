@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>TERRA Loads</title>
+  <meta name="description" content="Offline load planning and piece tracking for structural steel.">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TERRA Loads">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="version.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar" id="topbar">
+    <button class="btn btn-ghost" id="btn-loads" type="button" aria-controls="drawer" aria-expanded="false">
+      <span class="icon" aria-hidden="true">&#9776;</span><span>Loads</span>
+    </button>
+    <div class="stats" id="stats">
+      <div class="stat stat-load"><span class="stat-label">Load</span><span class="stat-value" id="stat-load">&mdash;</span></div>
+      <div class="stat"><span class="stat-label">Sequences</span><span class="stat-value" id="stat-seq">&mdash;</span></div>
+      <div class="stat"><span class="stat-label">Pieces</span><span class="stat-value" id="stat-pieces">0</span></div>
+      <div class="stat"><span class="stat-label">Weight</span><span class="stat-value" id="stat-weight">0 lbs</span></div>
+    </div>
+    <button class="btn btn-ghost" id="btn-update" type="button" title="Force update / reload application">
+      <span class="icon" aria-hidden="true">&#8635;</span><span>Update</span><span class="badge" id="update-badge" hidden>New</span>
+    </button>
+  </header>
+
+  <main class="workspace" id="workspace"></main>
+
+  <footer class="statusbar">
+    <span id="status-offline">Starting&hellip;</span>
+    <span id="status-parts"></span>
+    <span id="status-storage"></span>
+    <span id="status-version"></span>
+  </footer>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="drawer" id="drawer" aria-label="Saved loads" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>Loads</h2>
+      <button class="btn btn-ghost" id="btn-drawer-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <button class="btn btn-primary btn-block" id="btn-new-load-drawer" type="button">+ New Load</button>
+    <ul class="load-list" id="load-list"></ul>
+  </aside>
+
+  <dialog class="modal" id="dlg-new-load">
+    <form method="dialog" id="form-new-load">
+      <h2>New Load</h2>
+      <label for="input-load-name">Load name</label>
+      <input id="input-load-name" name="name" autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="60">
+      <p class="field-error" id="new-load-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="btn" type="button" id="btn-new-load-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit">Create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="dlg-update">
+    <h2>Update</h2>
+    <p id="update-text">Checking&hellip;</p>
+    <p class="muted">Saved loads stay on this iPad. Only the app files are refreshed.</p>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="btn-update-cancel">Close</button>
+      <button class="btn btn-primary" type="button" id="btn-update-go">Force Update</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
