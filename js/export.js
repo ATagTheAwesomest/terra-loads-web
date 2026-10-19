@@ -1,7 +1,7 @@
 // Export, share and print for a single load (see js/model.js for the shape).
 // Items are exported in array order, one line per scan, never collapsed.
 
-import { loadTotals, stackTotals, loadSequences, isFlagged, formatWeight } from './model.js';
+import { loadTotals, stackTotals, loadSequences, isFlagged, formatWeight, jobLabel } from './model.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -29,6 +29,7 @@ export function buildLoadText(load) {
   const lines = [
     '{',
     `LOAD_NAME: ${load.name}`,
+    `JOB: ${load.job || 'NONE'}`,
     `CREATED: ${formatDateTime(load.createdAt)}`,
     `TOTAL_PIECES: ${totals.pieces}`,
     `TOTAL_WEIGHT: ${plainWeight(totals.weight)}`,
@@ -98,6 +99,7 @@ export function renderPrintTicket(load, printedAt = new Date()) {
     'dl',
     { class: 'pt-summary' },
     el('dt', null, 'Load'), el('dd', null, load.name),
+    el('dt', null, 'Job'), el('dd', null, jobLabel(load)),
     el('dt', null, 'Created'), el('dd', null, formatDateTime(load.createdAt)),
     el('dt', null, 'Printed'), el('dd', null, formatDateTime(printedAt)),
     el('dt', null, 'Sequences'), el('dd', null, sequences.length ? sequences.join(', ') : 'None'),

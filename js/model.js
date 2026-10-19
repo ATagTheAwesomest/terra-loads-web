@@ -1,12 +1,24 @@
 // Pure data helpers for loads, stacks and scanned items. No storage or DOM here.
 //
-// Load  { id, name, createdAt, updatedAt, stacks: Stack[] }
+// Load  { id, name, job, createdAt, updatedAt, stacks: Stack[] }
 // Stack { id, name, items: Item[] }
 // Item  { id, mark, description, weight, matched, manual, scannedAt }
 //
 // Items are never collapsed: every scan is its own row, in scan order.
 
 import { lookupPart, normalizeMark } from './parts.js';
+
+// Job numbers a load can be filed under. A load saved before jobs existed has
+// job null until one is picked on the Manage Loads screen.
+export const JOB_NUMBERS = ['26123 - 25-418', '26102 - 25-351'];
+
+export function isJobNumber(job) {
+  return JOB_NUMBERS.includes(job);
+}
+
+export function jobLabel(load) {
+  return load?.job || 'No job';
+}
 
 export function newId() {
   return crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -20,10 +32,13 @@ export function createStack(loadName, index) {
   return { id: newId(), name: defaultStackName(loadName, index), items: [] };
 }
 
-export function createLoad(name) {
+export function createLoad(name, job = null) {
   const now = new Date().toISOString();
   const clean = String(name).trim();
-  return { id: newId(), name: clean, createdAt: now, updatedAt: now, pieceWeights: true, stacks: [createStack(clean, 1)] };
+  return {
+    id: newId(), name: clean, job: isJobNumber(job) ? job : null,
+    createdAt: now, updatedAt: now, pieceWeights: true, stacks: [createStack(clean, 1)],
+  };
 }
 
 // Builds an item from a scanned or typed mark. Unrecognized marks and manual

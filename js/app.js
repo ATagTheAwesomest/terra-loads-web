@@ -1,7 +1,7 @@
 // App shell: boot sequence, header stats, loads drawer, new-load flow, updates.
 
 import { loadParts, partCount } from './parts.js';
-import { createLoad, loadSequences, loadTotals, formatWeight, refreshPieceWeights } from './model.js';
+import { JOB_NUMBERS, createLoad, jobLabel, loadSequences, loadTotals, formatWeight, refreshPieceWeights } from './model.js';
 import { focusScanner, initScanner, renderScanbar } from './scanner.js';
 import { initStacks, renderStacks } from './stacks.js';
 import * as store from './store.js';
@@ -13,12 +13,17 @@ export const state = {
   load: null,
 };
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 export function toast(message, ms = 2500) {
   const el = $('#toast');
+  // Modal dialogs sit in the top layer, above anything in the page body, so
+  // the toast moves into the topmost open dialog to stay visible.
+  const dialogs = document.querySelectorAll('dialog[open]');
+  const host = dialogs[dialogs.length - 1] ?? document.body;
+  if (el.parentElement !== host) host.appendChild(el);
   el.textContent = message;
   el.hidden = false;
   clearTimeout(toast.timer);
@@ -32,6 +37,8 @@ export function renderStats() {
   const totals = loadTotals(load);
   const seqs = loadSequences(load);
   $('#stat-load').textContent = load?.name ?? '—';
+  $('#stat-job').textContent = load ? jobLabel(load) : '';
+  $('#stat-job').classList.toggle('missing', Boolean(load && !load.job));
   $('#stat-seq').textContent = seqs.length ? seqs.join(', ') : '—';
   $('#stat-pieces').textContent = totals.pieces.toLocaleString('en-US');
   $('#stat-weight').textContent = formatWeight(totals.weight);
@@ -94,12 +101,12 @@ async function renderLoadList() {
     const when = new Date(l.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
     return `<li><button class="btn load-row${l.id === state.load?.id ? ' active' : ''}" type="button" data-load-id="${l.id}">
       <span>${escapeHtml(l.name)}</span>
-      <span class="load-row-meta">${t.pieces} pcs &middot; ${formatWeight(t.weight)} &middot; ${when}</span>
+      <span class="load-row-meta">${escapeHtml(jobLabel(l))} &middot; ${t.pieces} pcs &middot; ${formatWeight(t.weight)} &middot; ${when}</span>
     </button></li>`;
   }).join('');
 }
 
-function setDrawer(open) {
+export function setDrawer(open) {
   $('#drawer').classList.toggle('open', open);
   $('#drawer').setAttribute('aria-hidden', String(!open));
   $('#btn-loads').setAttribute('aria-expanded', String(open));
@@ -115,9 +122,10 @@ export function setMenu(open) {
   $('#scrim').hidden = !open;
 }
 
-function showNewLoadDialog() {
+export function showNewLoadDialog() {
   setDrawer(false);
   $('#input-load-name').value = '';
+  $('#new-load-jobs').querySelectorAll('input').forEach((r) => { r.checked = false; });
   $('#new-load-error').textContent = '';
   $('#dlg-new-load').showModal();
   $('#input-load-name').focus();
@@ -135,9 +143,15 @@ async function submitNewLoad(event) {
     error.textContent = `A load named “${name}” already exists.`;
     return;
   }
-  const load = createLoad(name);
+  const job = $('#form-new-load').elements.job?.value;
+  if (!job) {
+    error.textContent = 'Pick a job number.';
+    return;
+  }
+  const load = createLoad(name, job);
   await store.saveLoad(load);
   $('#dlg-new-load').close();
+  document.getElementById('dlg-manage')?.close();
   state.load = load;
   store.setActiveLoadId(load.id);
   render();
@@ -190,7 +204,13 @@ function renderStatus() {
 
 // ---- Boot ----------------------------------------------------------------
 
+function renderJobChoices() {
+  $('#new-load-jobs').insertAdjacentHTML('beforeend', JOB_NUMBERS.map((job) => `
+    <label class="job-option"><input type="radio" name="job" value="${escapeHtml(job)}"><span>${escapeHtml(job)}</span></label>`).join(''));
+}
+
 function bindEvents() {
+  renderJobChoices();
   const ctx = { get load() { return state.load; }, save: saveCurrentLoad, render, toast };
   initScanner(ctx);
   initStacks(ctx);

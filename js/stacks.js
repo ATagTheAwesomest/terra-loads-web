@@ -9,8 +9,10 @@ import {
   removeStack, renameStack, setActiveStack, setItemWeight,
 } from './ops.js';
 import { focusScanner, openKeypad } from './scanner.js';
+import { bindHold } from './hold.js';
 
-const HOLD_MS = 1500;
+const ITEM_HOLD_MS = 1500;
+const STACK_HOLD_MS = 4000;
 
 let ctx = null;
 const expanded = new Set(); // item ids showing their detail panel
@@ -58,7 +60,7 @@ function renderItem(it, i, count) {
       <span class="item-actions">
         <button class="btn btn-icon" type="button" data-action="up" aria-label="Move up">&#9650;</button>
         <button class="btn btn-icon" type="button" data-action="down" aria-label="Move down">&#9660;</button>
-        <button class="btn btn-icon btn-hold" type="button" data-hold="item" aria-label="Hold to delete" title="Hold to delete">&#128465;</button>
+        <button class="btn btn-icon btn-hold" type="button" data-hold="item" data-hold-ms="${ITEM_HOLD_MS}" aria-label="Hold to delete" title="Hold to delete">&#128465;</button>
       </span>
       ${expanded.has(it.id) ? renderDetail(it, count) : ''}
     </li>`;
@@ -68,7 +70,6 @@ export function renderStack(stack, load, counts = pieceCounts(load)) {
   const t = stackTotals(stack);
   const flagged = stack.items.filter(isFlagged).length;
   const active = activeStack(load) === stack;
-  const canRemove = !stack.items.length && load.stacks.length > 1;
   return `
     <section class="stack${active ? ' active' : ''}" data-stack-id="${stack.id}">
       <header class="stack-head">
@@ -80,7 +81,7 @@ export function renderStack(stack, load, counts = pieceCounts(load)) {
         ${active
           ? '<span class="badge badge-active">Scanning here</span>'
           : '<button class="btn" type="button" data-action="activate">Scan here</button>'}
-        ${canRemove ? '<button class="btn btn-icon btn-hold" type="button" data-hold="stack" aria-label="Hold to remove empty stack" title="Hold to remove empty stack">&#128465;</button>' : ''}
+        <button class="btn btn-icon btn-hold" type="button" data-hold="stack" data-hold-ms="${STACK_HOLD_MS}" aria-label="Hold 4 seconds to delete stack" title="Hold 4 seconds to delete stack">&#128465;</button>
       </header>
       ${stack.items.length
         ? `<ol class="items">${stack.items.map((it, i) => renderItem(it, i, counts.get(it.id))).join('')}</ol>`
@@ -126,26 +127,7 @@ function startRename(stackEl) {
 
 // ---- Hold to delete ------------------------------------------------------
 
-let hold = null; // { btn, timer, pointerId, started }
-let lastHoldDone = 0;
-
-function cancelHold() {
-  if (!hold) return;
-  clearTimeout(hold.timer);
-  hold.btn.classList.remove('holding');
-  hold = null;
-}
-
-function startHold(btn, pointerId) {
-  cancelHold();
-  btn.classList.add('holding');
-  hold = { btn, pointerId, started: Date.now(), timer: setTimeout(() => completeHold(btn), HOLD_MS) };
-}
-
 function completeHold(btn) {
-  hold = null;
-  lastHoldDone = Date.now();
-  btn.classList.remove('holding');
   const load = ctx.load;
   if (btn.dataset.hold === 'item') {
     const id = btn.closest('[data-item-id]')?.dataset.itemId;
@@ -154,7 +136,11 @@ function completeHold(btn) {
   } else {
     const stackEl = btn.closest('[data-stack-id]');
     const stack = stackEl && findStack(load, stackEl.dataset.stackId);
-    if (stack && removeStack(load, stack.id)) { ctx.save(); ctx.toast(`Removed ${stack.name}`); }
+    const pieces = stack?.items.length ?? 0;
+    if (stack && removeStack(load, stack.id)) {
+      ctx.save();
+      ctx.toast(`Deleted ${stack.name}${pieces ? ` and its ${pieces} piece${pieces === 1 ? '' : 's'}` : ''}`);
+    }
   }
 }
 
@@ -288,32 +274,20 @@ export function initStacks(context) {
     }
   });
 
+  bindHold(ws, {
+    onComplete: completeHold,
+    onTap: (btn, secs) => ctx.toast(`Hold for ${secs} seconds to delete${btn.dataset.hold === 'stack' ? ' this stack and its pieces' : ''}.`),
+  });
   ws.addEventListener('pointerdown', (e) => {
-    const holdBtn = e.target.closest('[data-hold]');
-    if (holdBtn) { startHold(holdBtn, e.pointerId); return; }
+    if (e.target.closest('[data-hold]')) return;
     const handle = e.target.closest('[data-drag]');
     if (handle) startDrag(handle, e);
   });
   ws.addEventListener('contextmenu', (e) => {
-    if (e.target.closest('[data-hold], [data-drag]')) e.preventDefault();
-  });
-  ws.addEventListener('click', (e) => {
-    // A short tap on a delete button explains the hold instead of deleting.
-    if (e.target.closest('[data-hold]') && !hold && Date.now() - lastHoldDone > 600) ctx.toast('Hold for 1.5 seconds to delete.');
+    if (e.target.closest('[data-drag]')) e.preventDefault();
   });
 
   document.addEventListener('pointermove', moveDrag);
-  document.addEventListener('pointerup', (e) => {
-    endDrag(e);
-    if (hold && Date.now() - hold.started < HOLD_MS) {
-      const early = hold;
-      cancelHold();
-      early.btn.blur();
-    }
-  });
-  document.addEventListener('pointercancel', (e) => { endDrag(e, false); cancelHold(); });
-  ws.addEventListener('pointerleave', cancelHold);
-  ws.addEventListener('pointerout', (e) => {
-    if (hold && e.target.closest?.('[data-hold]') === hold.btn && !hold.btn.contains(e.relatedTarget)) cancelHold();
-  });
+  document.addEventListener('pointerup', (e) => endDrag(e));
+  document.addEventListener('pointercancel', (e) => endDrag(e, false));
 }

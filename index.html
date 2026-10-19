@@ -19,6 +19,7 @@
   <script src="version.js"></script>
   <script type="module" src="js/app.js"></script>
   <script type="module" src="js/export-ui.js"></script>
+  <script type="module" src="js/manage.js"></script>
 </head>
 <body>
   <header class="topbar" id="topbar">
@@ -26,7 +27,7 @@
       <span class="icon" aria-hidden="true">&#9776;</span><span>Loads</span>
     </button>
     <div class="stats" id="stats">
-      <div class="stat stat-load"><span class="stat-label">Load</span><span class="stat-value" id="stat-load">&mdash;</span></div>
+      <div class="stat stat-load"><span class="stat-label">Load</span><span class="stat-value" id="stat-load">&mdash;</span><span class="stat-sub" id="stat-job"></span></div>
       <div class="stat"><span class="stat-label">Sequences</span><span class="stat-value" id="stat-seq">&mdash;</span></div>
       <div class="stat"><span class="stat-label">Pieces</span><span class="stat-value" id="stat-pieces">0</span></div>
       <div class="stat"><span class="stat-label">Weight</span><span class="stat-value" id="stat-weight">0 lbs</span></div>
@@ -69,6 +70,7 @@
     </div>
     <button class="btn btn-primary btn-block" id="btn-new-load-drawer" type="button">+ New Load</button>
     <ul class="load-list" id="load-list"></ul>
+    <button class="btn btn-block" id="btn-manage-loads" type="button">Manage loads</button>
   </aside>
   <aside class="drawer drawer-right" id="menu" aria-label="Menu" aria-hidden="true">
     <div class="drawer-head">
@@ -92,12 +94,25 @@
       <h2>New Load</h2>
       <label for="input-load-name">Load name</label>
       <input id="input-load-name" name="name" autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="60">
+      <fieldset class="job-choice" id="new-load-jobs">
+        <legend>Job number</legend>
+      </fieldset>
       <p class="field-error" id="new-load-error" role="alert"></p>
       <div class="modal-actions">
         <button class="btn" type="button" id="btn-new-load-cancel">Cancel</button>
         <button class="btn btn-primary" type="submit">Create</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="modal manage" id="dlg-manage">
+    <div class="manage-head">
+      <h2>Manage loads</h2>
+      <button class="btn btn-primary" type="button" id="btn-manage-new">+ New Load</button>
+      <button class="btn btn-ghost" type="button" id="btn-manage-close" aria-label="Close">&times;</button>
+    </div>
+    <p class="muted manage-note">Hold the delete button for 7.5 seconds to delete a load and everything in it.</p>
+    <ul class="manage-list" id="manage-list"></ul>
   </dialog>
 
   <dialog class="modal" id="dlg-update">

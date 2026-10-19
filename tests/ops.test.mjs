@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { loadParts } from '../js/parts.js';
-import { createLoad } from '../js/model.js';
+import { JOB_NUMBERS, createLoad } from '../js/model.js';
 import {
   activeStack, addScan, addStack, findItem, moveItem, moveItemTo,
-  removeItem, removeStack, renameStack, setActiveStack, setItemWeight,
+  removeItem, removeStack, renameStack, setActiveStack, setItemWeight, setLoadJob,
 } from '../js/ops.js';
 
 before(async () => {
@@ -96,14 +96,39 @@ test('moveItemTo uses drop-before positions', () => {
   assert.equal(findItem(load, b.id).stack, s2);
 });
 
-test('remove item, empty stacks only, and weight edits', () => {
+test('stacks can be removed with their pieces, and a load keeps one stack', () => {
+  const load = createLoad('T');
+  addScan(load, '9999-Z9');
+  const s2 = addStack(load);
+  addScan(load, '9999-Z8');
+  assert.equal(removeStack(load, s2.id), true);
+  assert.equal(load.stacks.length, 1);
+  assert.equal(activeStack(load), load.stacks[0]);
+  const only = load.stacks[0].id;
+  assert.equal(removeStack(load, only), true);
+  assert.equal(load.stacks.length, 1);
+  assert.notEqual(load.stacks[0].id, only);
+  assert.equal(load.stacks[0].items.length, 0);
+  assert.equal(load.stacks[0].name, 'Stack T - 1');
+  assert.equal(activeStack(load), load.stacks[0]);
+  assert.equal(removeStack(load, 'nope'), false);
+});
+
+test('job numbers are limited to the known list', () => {
+  assert.equal(createLoad('T', '26123 - 25-418').job, '26123 - 25-418');
+  assert.equal(createLoad('T', 'bogus').job, null);
+  const load = createLoad('T');
+  assert.equal(load.job, null);
+  assert.equal(setLoadJob(load, '26102 - 25-351'), true);
+  assert.equal(setLoadJob(load, '26102 - 25-351'), false);
+  assert.equal(setLoadJob(load, 'bogus'), false);
+  assert.equal(load.job, '26102 - 25-351');
+  assert.deepEqual(JOB_NUMBERS, ['26123 - 25-418', '26102 - 25-351']);
+});
+
+test('remove item and weight edits', () => {
   const load = createLoad('T');
   const a = addScan(load, '9999-Z9');
-  assert.equal(removeStack(load, load.stacks[0].id), false);
-  const s2 = addStack(load);
-  assert.equal(removeStack(load, load.stacks[0].id), false);
-  assert.equal(removeStack(load, s2.id), true);
-  assert.equal(activeStack(load), load.stacks[0]);
   assert.equal(setItemWeight(load, a.id, '-5'), false);
   assert.equal(setItemWeight(load, a.id, 'abc'), false);
   assert.equal(setItemWeight(load, a.id, '125.456'), true);

@@ -32,7 +32,9 @@ Safari tabs after a week of no use, so always run it from the home screen.
 | `index.html` | App shell: header stats, workspace, loads drawer, dialogs |
 | `css/app.css` | Dark industrial theme, 48px+ tap targets, print base |
 | `js/app.js` | Boot, rendering, loads drawer, new-load flow, update UI |
-| `js/model.js` | Pure helpers: create loads/stacks/items, totals, sequences |
+| `js/manage.js` | Manage Loads screen: job numbers, open, export, hold-to-delete |
+| `js/hold.js` | Press-and-hold buttons for deletes (item 1.5 s, stack 4 s, load 7.5 s) |
+| `js/model.js` | Pure helpers: create loads/stacks/items, totals, sequences, job numbers |
 | `js/parts.js` | Loads and parses `data/master_parts.csv`, exact-match lookup |
 | `js/store.js` | Persistence: localStorage journal + IndexedDB |
 | `js/updater.js` | Service worker registration, version check, Force Update |
@@ -43,13 +45,16 @@ Safari tabs after a week of no use, so always run it from the home screen.
 ## Data model
 
 ```
-Load  { id, name, createdAt, updatedAt, rev, stacks: Stack[] }
+Load  { id, name, job, createdAt, updatedAt, rev, stacks: Stack[] }
 Stack { id, name, items: Item[] }
 Item  { id, mark, description, weight, matched, manual, scannedAt }
 ```
 
 Every scan is its own item, in scan order; identical marks are never merged.
 Unmatched or manually entered marks get a trailing `-` and are flagged orange.
+`job` is one of `JOB_NUMBERS` in `js/model.js`, picked when the load is created;
+loads saved before job numbers existed have `job: null` until one is picked on
+the Manage Loads screen.
 
 ## Storage
 
