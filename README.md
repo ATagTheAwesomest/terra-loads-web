@@ -32,6 +32,9 @@ Safari tabs after a week of no use, so always run it from the home screen.
 | `index.html` | App shell: header stats, workspace, loads drawer, dialogs |
 | `css/app.css` | Dark industrial theme, 48px+ tap targets, print base |
 | `js/app.js` | Boot, rendering, loads drawer, new-load flow, update UI |
+| `js/check.js` | Truck check logic: matches check scans to the load's pieces |
+| `js/check-ui.js` | Truck check screen: checklist, extras, undo and start over |
+| `js/mobile.js` | Phone layout toggle and its own stack/row markup (`css/mobile.css`) |
 | `js/manage.js` | Manage Loads screen: job numbers, open, export, hold-to-delete |
 | `js/hold.js` | Press-and-hold buttons for deletes (item 1.5 s, stack 4 s, load 7.5 s) |
 | `js/model.js` | Pure helpers: create loads/stacks/items, totals, sequences, job numbers |
@@ -54,7 +57,28 @@ Every scan is its own item, in scan order; identical marks are never merged.
 Unmatched or manually entered marks get a trailing `-` and are flagged orange.
 `job` is one of `JOB_NUMBERS` in `js/model.js`, picked when the load is created;
 loads saved before job numbers existed have `job: null` until one is picked on
-the Manage Loads screen.
+the Manage Loads screen. Jobs in `NO_SEQUENCE_JOBS` (26111) show no sequences.
+
+A mark is only unique within a job, so every lookup is job plus mark. The
+master list may carry a `Job` column (`26123` or `26123 - 25-418`); rows with
+no job, like the current file, match a mark on any job.
+
+## Truck check
+
+Menu → **Truck check** turns the open load into a checklist. Each scan checks
+off one piece with the same job and mark; a scan with nothing left to check
+off shows red and is listed under Extras. The check is saved on the load as
+`truckCheck { startedAt, updatedAt, scans: [{ id, mark, manual, scannedAt }] }`;
+which piece each scan ticks is worked out on every read, so editing the load
+afterwards never leaves a stale check. Hold a row's undo button 1.5 s to
+uncheck it, or **Start over** 4 s to clear the check. Printed tickets fill the
+✓ column from the check.
+
+## Phone layout
+
+Menu → **Phone layout** switches this device to a separate phone layout
+(`js/mobile.js` + `css/mobile.css`, all scoped under `body.layout-mobile`).
+It turns on by itself the first time on a phone-sized screen.
 
 ## Storage
 

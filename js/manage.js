@@ -2,6 +2,7 @@
 // export actions, and a 7.5 second hold to delete.
 
 import { escapeHtml, openLoad, render, setDrawer, showNewLoadDialog, state, toast } from './app.js';
+import { checkSummary } from './check.js';
 import { shareLoadFile } from './export.js';
 import { bindHold } from './hold.js';
 import { JOB_NUMBERS, formatWeight, loadTotals } from './model.js';
@@ -40,7 +41,7 @@ async function renderList() {
       <li class="manage-row${open ? ' active' : ''}" data-load-id="${l.id}">
         <div class="manage-info">
           <span class="manage-name">${escapeHtml(l.name)}${open ? ' <span class="badge badge-active">Open</span>' : ''}</span>
-          <span class="load-row-meta">${t.pieces} pcs &middot; ${formatWeight(t.weight)} &middot; ${l.stacks.length} stack${l.stacks.length === 1 ? '' : 's'} &middot; ${when}</span>
+          <span class="load-row-meta">${t.pieces} pcs &middot; ${formatWeight(t.weight)} &middot; ${l.stacks.length} stack${l.stacks.length === 1 ? '' : 's'} &middot; ${when}${checkSummary(l) ? ` &middot; ${escapeHtml(checkSummary(l))}` : ''}</span>
         </div>
         ${jobSelect(l)}
         <div class="manage-actions">

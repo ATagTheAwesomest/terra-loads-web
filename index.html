@@ -15,6 +15,8 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/check.css">
+  <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/print.css">
   <script src="version.js"></script>
   <script type="module" src="js/app.js"></script>
@@ -27,7 +29,7 @@
       <span class="icon" aria-hidden="true">&#9776;</span><span>Loads</span>
     </button>
     <div class="stats" id="stats">
-      <div class="stat stat-load"><span class="stat-label">Load</span><span class="stat-value" id="stat-load">&mdash;</span><span class="stat-sub" id="stat-job"></span></div>
+      <div class="stat stat-load"><span class="stat-label">Load</span><span class="stat-value" id="stat-load">&mdash;</span><span class="stat-sub" id="stat-job"></span><span class="mode-badge" id="mode-badge" hidden>Truck check</span></div>
       <div class="stat"><span class="stat-label">Sequences</span><span class="stat-value" id="stat-seq">&mdash;</span></div>
       <div class="stat"><span class="stat-label">Pieces</span><span class="stat-value" id="stat-pieces">0</span></div>
       <div class="stat"><span class="stat-label">Weight</span><span class="stat-value" id="stat-weight">0 lbs</span></div>
@@ -40,7 +42,7 @@
   <section class="scanbar unfocused" id="scanbar" hidden>
     <label class="scan-field" for="scan-input">
       <span class="scan-meta">
-        <span class="stat-label">Scanning into</span>
+        <span class="stat-label" id="scan-label">Scanning into</span>
         <span class="scan-stack" id="scan-stack">&mdash;</span>
         <span class="scan-hint" id="scan-hint">Tap here to resume scanning</span>
       </span>
@@ -48,6 +50,7 @@
     </label>
     <button class="btn btn-lg" id="btn-keypad" type="button"><span class="icon" aria-hidden="true">&#9783;</span><span>Keypad</span></button>
     <button class="btn btn-lg btn-primary" id="btn-new-stack" type="button">+ New Stack</button>
+    <button class="btn btn-lg btn-primary" id="btn-check-done" type="button" hidden>Done checking</button>
   </section>
   <div class="colhead" id="colhead" hidden aria-hidden="true">
     <span></span><span>#</span><span>Mark</span><span>Description</span><span class="colhead-num">Weight</span><span></span>
@@ -77,6 +80,9 @@
       <h2>Menu</h2>
       <button class="btn btn-ghost" id="btn-menu-close" type="button" aria-label="Close">&times;</button>
     </div>
+    <button class="btn btn-block menu-item" id="btn-truck-check" type="button">
+      <span class="icon" aria-hidden="true">&#10003;</span><span id="truck-check-label">Truck check</span>
+    </button>
     <button class="btn btn-block menu-item" id="btn-share" type="button">
       <span class="icon" aria-hidden="true">&#8679;</span><span>Share load file</span>
     </button>
@@ -85,6 +91,9 @@
     </button>
     <button class="btn btn-block menu-item" id="btn-update" type="button">
       <span class="icon" aria-hidden="true">&#8635;</span><span>Update app</span><span class="badge" id="update-badge" hidden>New</span>
+    </button>
+    <button class="btn btn-block menu-item menu-toggle" id="btn-layout" type="button" aria-pressed="false">
+      <span class="icon" aria-hidden="true">&#128241;</span><span>Phone layout</span><span class="toggle-state" id="layout-state">Off</span>
     </button>
   </aside>
   <div class="screen-flash" id="screen-flash" aria-hidden="true"></div>

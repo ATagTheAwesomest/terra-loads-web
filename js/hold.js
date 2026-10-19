@@ -23,11 +23,12 @@ export function isHolding() {
   return Boolean(hold);
 }
 
-// Wires every [data-hold] inside root. onComplete(btn) runs when a hold
-// finishes; onTap(btn, seconds) runs on a press released too early.
-export function bindHold(root, { onComplete, onTap }) {
+// Wires every [data-hold] inside root, or only those matching selector so two
+// screens can share a root. onComplete(btn) runs when a hold finishes;
+// onTap(btn, seconds) runs on a press released too early.
+export function bindHold(root, { onComplete, onTap, selector = '[data-hold]' }) {
   root.addEventListener('pointerdown', (e) => {
-    const btn = e.target.closest('[data-hold]');
+    const btn = e.target.closest(selector);
     if (!btn || !root.contains(btn)) return;
     cancelHold();
     const ms = holdMs(btn);
@@ -47,7 +48,7 @@ export function bindHold(root, { onComplete, onTap }) {
     if (e.target.closest('[data-hold]')) e.preventDefault();
   });
   root.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-hold]');
+    const btn = e.target.closest(selector);
     if (btn && !hold && Date.now() - lastHoldDone > 600) onTap?.(btn, holdMs(btn) / 1000);
   });
   root.addEventListener('pointerleave', cancelHold);

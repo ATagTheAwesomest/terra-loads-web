@@ -33,7 +33,7 @@ export function addScan(load, rawMark, { manual = false } = {}) {
   if (!String(rawMark ?? '').trim()) return null;
   if (!load.stacks.length) load.stacks.push(createStack(load.name, 1));
   const stack = activeStack(load);
-  const item = createItem(rawMark, { manual });
+  const item = createItem(rawMark, { manual, job: load.job });
   stack.items.push(item);
   load.activeStackId = stack.id;
   return item;

@@ -1,7 +1,8 @@
 // Export, share and print for a single load (see js/model.js for the shape).
 // Items are exported in array order, one line per scan, never collapsed.
 
-import { loadTotals, stackTotals, loadSequences, isFlagged, formatWeight, jobLabel } from './model.js';
+import { checkStatus, hasCheck } from './check.js';
+import { loadTotals, stackTotals, loadSequences, isFlagged, formatWeight, jobHasSequences, jobLabel } from './model.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -94,6 +95,8 @@ function el(tag, attrs, ...children) {
 export function renderPrintTicket(load, printedAt = new Date()) {
   const totals = loadTotals(load);
   const sequences = loadSequences(load);
+  // A truck check, when one was run, fills in the check column.
+  const check = hasCheck(load) ? checkStatus(load) : null;
 
   const summary = el(
     'dl',
@@ -102,9 +105,11 @@ export function renderPrintTicket(load, printedAt = new Date()) {
     el('dt', null, 'Job'), el('dd', null, jobLabel(load)),
     el('dt', null, 'Created'), el('dd', null, formatDateTime(load.createdAt)),
     el('dt', null, 'Printed'), el('dd', null, formatDateTime(printedAt)),
-    el('dt', null, 'Sequences'), el('dd', null, sequences.length ? sequences.join(', ') : 'None'),
+    el('dt', null, 'Sequences'), el('dd', null, sequences.length ? sequences.join(', ') : jobHasSequences(load.job) ? 'None' : 'None (job has no sequences)'),
     el('dt', null, 'Total pieces'), el('dd', null, totals.pieces),
     el('dt', null, 'Total weight'), el('dd', null, formatWeight(totals.weight)),
+    check ? el('dt', null, 'Truck check') : null,
+    check ? el('dd', null, `${check.checked} of ${check.total} checked${check.extras.length ? `, ${check.extras.length} extra` : ''}`) : null,
   );
 
   const stacks = load.stacks.map((stack) => {
@@ -117,7 +122,7 @@ export function renderPrintTicket(load, printedAt = new Date()) {
         el('td', { class: 'pt-mark' }, item.mark),
         el('td', null, item.description || ''),
         el('td', { class: 'pt-num' }, plainWeight(item.weight)),
-        el('td', { class: 'pt-check' }, ''),
+        el('td', { class: 'pt-check' }, check?.checkedBy.has(item.id) ? '✓' : ''),
       ),
     );
     return el(
