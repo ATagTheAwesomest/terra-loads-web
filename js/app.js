@@ -1,7 +1,9 @@
 // App shell: boot sequence, header stats, loads drawer, new-load flow, updates.
 
 import { loadParts, partCount } from './parts.js';
-import { createLoad, isFlagged, loadSequences, loadTotals, stackTotals, formatWeight } from './model.js';
+import { createLoad, loadSequences, loadTotals, formatWeight } from './model.js';
+import { focusScanner, initScanner, renderScanbar } from './scanner.js';
+import { initStacks, renderStacks } from './stacks.js';
 import * as store from './store.js';
 import { APP_VERSION, checkForUpdate, forceUpdate, registerServiceWorker } from './updater.js';
 
@@ -35,25 +37,6 @@ export function renderStats() {
   $('#stat-weight').textContent = formatWeight(totals.weight);
 }
 
-function renderStack(stack) {
-  const t = stackTotals(stack);
-  const rows = stack.items.map((it, i) => `
-    <li class="item${isFlagged(it) ? ' flagged' : ''}" data-item-id="${it.id}">
-      <span class="item-index">${i + 1}</span>
-      <span class="item-mark">${escapeHtml(it.mark)}</span>
-      <span class="item-desc">${escapeHtml(it.description || (it.matched ? '' : 'Not in master list'))}</span>
-      <span class="item-weight">${formatWeight(it.weight)}</span>
-    </li>`).join('');
-  return `
-    <section class="stack" data-stack-id="${stack.id}">
-      <header class="stack-head">
-        <span class="stack-name">${escapeHtml(stack.name)}</span>
-        <span class="stack-stats">${t.pieces} pcs &middot; ${formatWeight(t.weight)}</span>
-      </header>
-      ${rows ? `<ol class="items">${rows}</ol>` : '<p class="stack-empty">No pieces yet.</p>'}
-    </section>`;
-}
-
 export function renderWorkspace() {
   const ws = $('#workspace');
   if (!state.load) {
@@ -65,11 +48,12 @@ export function renderWorkspace() {
       </div>`;
     return;
   }
-  ws.innerHTML = state.load.stacks.map(renderStack).join('');
+  ws.innerHTML = renderStacks(state.load);
 }
 
 export function render() {
   renderStats();
+  renderScanbar();
   renderWorkspace();
 }
 
@@ -79,13 +63,21 @@ export async function openLoad(id) {
   state.load = id ? await store.getLoad(id) : null;
   store.setActiveLoadId(state.load?.id ?? null);
   render();
+  focusScanner();
 }
 
-// Persists the open load and refreshes the screen.
+// Persists the open load and refreshes the screen. The journal write inside
+// saveLoad() is synchronous, so the screen updates without waiting on IndexedDB.
 export async function saveCurrentLoad() {
   if (!state.load) return;
-  await store.saveLoad(state.load);
+  const saved = store.saveLoad(state.load);
   render();
+  try {
+    await saved;
+  } catch (err) {
+    console.error(err);
+    toast('Could not save. Storage may be full.', 5000);
+  }
 }
 
 async function renderLoadList() {
@@ -139,6 +131,7 @@ async function submitNewLoad(event) {
   state.load = load;
   store.setActiveLoadId(load.id);
   render();
+  focusScanner();
   toast(`Created ${name}`);
 }
 
@@ -187,6 +180,9 @@ function renderStatus() {
 // ---- Boot ----------------------------------------------------------------
 
 function bindEvents() {
+  const ctx = { get load() { return state.load; }, save: saveCurrentLoad, render, toast };
+  initScanner(ctx);
+  initStacks(ctx);
   $('#btn-loads').addEventListener('click', () => setDrawer(true));
   $('#btn-drawer-close').addEventListener('click', () => setDrawer(false));
   $('#scrim').addEventListener('click', () => setDrawer(false));
