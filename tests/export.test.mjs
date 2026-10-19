@@ -4,6 +4,7 @@ import { buildLoadText, fileNameFor, plainWeight } from '../js/export.js';
 
 const load = {
   name: 'TRUCK-LOAD-101',
+  job: '26123 - 25-418',
   createdAt: new Date(2026, 9, 19, 11, 15),
   stacks: [
     {
@@ -31,6 +32,7 @@ test('text export matches the spec layout and keeps every scan', () => {
     [
       '{',
       'LOAD_NAME: TRUCK-LOAD-101',
+      'JOB: 26123 - 25-418',
       'CREATED: 2026-10-19 11:15',
       'TOTAL_PIECES: 6',
       'TOTAL_WEIGHT: 1850',

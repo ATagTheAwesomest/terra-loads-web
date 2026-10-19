@@ -120,6 +120,8 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
   text-overflow: ellipsis;
 }
 .stat-load .stat-value { color: var(--accent); }
+.stat-sub { font-size: 0.75rem; color: var(--text-muted); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-sub.missing { color: var(--flag); }
 
 /* Main work area */
 .workspace {
@@ -336,7 +338,7 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
   transform: scaleX(0);
   transform-origin: left;
 }
-.btn-hold.holding::after { transform: scaleX(1); transition: transform 1500ms linear; }
+.btn-hold.holding::after { transform: scaleX(1); transition: transform var(--hold-ms, 1500ms) linear; }
 .item.dragging { opacity: 0.35; }
 .drag-ghost {
   position: fixed;
@@ -469,6 +471,75 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
 .field-error { min-height: 1.4em; margin: 8px 0 0; color: var(--danger); font-weight: 600; }
 .modal-actions { display: flex; justify-content: flex-end; gap: var(--gap); margin-top: 16px; }
 
+/* Job number picker (new load) */
+.job-choice { margin: 16px 0 0; padding: 0; border: 0; }
+.job-choice legend { margin-bottom: 6px; padding: 0; color: var(--text-muted); font-size: 0.85rem; }
+.modal .job-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  margin: 0 0 8px;
+  padding: 0 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modal .job-option input { width: 24px; min-height: 0; height: 24px; margin: 0; accent-color: var(--accent); }
+.modal .job-option:has(input:checked) { border-color: var(--accent); color: var(--accent); }
+
+/* Manage loads screen */
+.modal.manage {
+  width: min(1100px, 96vw);
+  height: min(900px, 92vh);
+  max-height: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.modal.manage[open] { display: flex; }
+.manage-head { display: flex; align-items: center; gap: var(--gap); }
+.manage-head h2 { flex: 1; margin: 0; }
+.manage-head .btn-ghost { font-size: 1.6rem; }
+.manage-note { margin: 0 0 8px; font-size: 0.85rem; }
+.manage-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.manage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13em auto;
+  align-items: center;
+  gap: var(--gap);
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.manage-row.active { border-color: var(--accent); }
+.manage-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.manage-name { font-weight: 700; font-size: 1.1rem; overflow-wrap: anywhere; }
+.manage-name .badge { vertical-align: middle; margin-left: 6px; }
+.manage-actions { display: flex; gap: 8px; }
+.manage-delete { min-width: 120px; }
+.job-select {
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.job-select.missing { border-color: var(--flag); color: var(--flag); }
+.manage-empty { padding: 24px 0; }
+#btn-manage-loads { min-height: 56px; }
+
 /* Toast */
 .toast {
   position: fixed;
@@ -494,6 +565,8 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
   .workspace { padding: 12px; }
   .colhead { padding: 0 calc(12px + 2px + var(--item-pad)); }
   .keypad-body { flex-direction: column; }
+  .manage-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .manage-info { grid-column: 1 / -1; }
   .keypad-digits { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
@@ -502,6 +575,7 @@ h1, h2, h3 { margin: 0 0 var(--gap); font-weight: 700; letter-spacing: 0.02em; }
   .scan-field { flex-basis: 100%; }
   .scanbar .btn-lg { flex: 1; }
   .colhead { display: none; }
+  .manage-row { grid-template-columns: minmax(0, 1fr); }
   .item { grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "drag mark weight" "drag desc actions" "detail detail detail"; }
   .item > * + * { border-left: 0; }
   .item-detail { grid-area: detail; }

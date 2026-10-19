@@ -2,7 +2,7 @@
 // moving or deleting items. Pure functions that mutate the load in place; the
 // caller persists with store.saveLoad(). No DOM here.
 
-import { createItem, createStack, defaultStackName } from './model.js';
+import { createItem, createStack, defaultStackName, isJobNumber } from './model.js';
 
 export function findStack(load, stackId) {
   return load.stacks.find((s) => s.id === stackId) ?? null;
@@ -66,13 +66,24 @@ export function renameStack(load, stackId, name) {
   return true;
 }
 
-// Only empty stacks can be removed, and a load always keeps one stack.
+// Removes a stack and every piece in it. A load always keeps one stack, so
+// removing the only stack leaves a fresh empty one in its place.
 export function removeStack(load, stackId) {
   const stack = findStack(load, stackId);
-  if (!stack || stack.items.length || load.stacks.length < 2) return false;
+  if (!stack) return false;
   const at = load.stacks.indexOf(stack);
   load.stacks.splice(at, 1);
-  if (load.activeStackId === stackId) load.activeStackId = load.stacks[Math.max(0, at - 1)].id;
+  if (!load.stacks.length) load.stacks.push(createStack(load.name, 1));
+  if (load.activeStackId === stackId || !findStack(load, load.activeStackId)) {
+    load.activeStackId = load.stacks[Math.max(0, at - 1)].id;
+  }
+  return true;
+}
+
+// Files the load under one of JOB_NUMBERS. Returns true if changed.
+export function setLoadJob(load, job) {
+  if (!isJobNumber(job) || load.job === job) return false;
+  load.job = job;
   return true;
 }
 

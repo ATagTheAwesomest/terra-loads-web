@@ -14,6 +14,8 @@ const PRECACHE = [
   './js/app.js',
   './js/export.js',
   './js/export-ui.js',
+  './js/hold.js',
+  './js/manage.js',
   './js/model.js',
   './js/ops.js',
   './js/parts.js',
