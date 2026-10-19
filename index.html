@@ -31,14 +31,8 @@
       <div class="stat"><span class="stat-label">Pieces</span><span class="stat-value" id="stat-pieces">0</span></div>
       <div class="stat"><span class="stat-label">Weight</span><span class="stat-value" id="stat-weight">0 lbs</span></div>
     </div>
-    <button class="btn btn-ghost" id="btn-share" type="button" title="Share load file">
-      <span class="icon" aria-hidden="true">&#8679;</span><span>Share</span>
-    </button>
-    <button class="btn btn-ghost" id="btn-print" type="button" title="Print shipping ticket">
-      <span class="icon" aria-hidden="true">&#9113;</span><span>Print</span>
-    </button>
-    <button class="btn btn-ghost" id="btn-update" type="button" title="Force update / reload application">
-      <span class="icon" aria-hidden="true">&#8635;</span><span>Update</span><span class="badge" id="update-badge" hidden>New</span>
+    <button class="btn btn-ghost btn-menu" id="btn-menu" type="button" aria-controls="menu" aria-expanded="false" aria-label="Menu">
+      <span class="icon" aria-hidden="true">&#9776;</span><span class="badge badge-dot" id="menu-badge" hidden></span>
     </button>
   </header>
 
@@ -54,6 +48,9 @@
     <button class="btn btn-lg" id="btn-keypad" type="button"><span class="icon" aria-hidden="true">&#9783;</span><span>Keypad</span></button>
     <button class="btn btn-lg btn-primary" id="btn-new-stack" type="button">+ New Stack</button>
   </section>
+  <div class="colhead" id="colhead" hidden aria-hidden="true">
+    <span></span><span>#</span><span>Mark</span><span>Description</span><span class="colhead-num">Weight</span><span></span>
+  </div>
 
   <main class="workspace" id="workspace"></main>
 
@@ -73,6 +70,22 @@
     <button class="btn btn-primary btn-block" id="btn-new-load-drawer" type="button">+ New Load</button>
     <ul class="load-list" id="load-list"></ul>
   </aside>
+  <aside class="drawer drawer-right" id="menu" aria-label="Menu" aria-hidden="true">
+    <div class="drawer-head">
+      <h2>Menu</h2>
+      <button class="btn btn-ghost" id="btn-menu-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <button class="btn btn-block menu-item" id="btn-share" type="button">
+      <span class="icon" aria-hidden="true">&#8679;</span><span>Share load file</span>
+    </button>
+    <button class="btn btn-block menu-item" id="btn-print" type="button">
+      <span class="icon" aria-hidden="true">&#9113;</span><span>Print shipping ticket</span>
+    </button>
+    <button class="btn btn-block menu-item" id="btn-update" type="button">
+      <span class="icon" aria-hidden="true">&#8635;</span><span>Update app</span><span class="badge" id="update-badge" hidden>New</span>
+    </button>
+  </aside>
+  <div class="screen-flash" id="screen-flash" aria-hidden="true"></div>
 
   <dialog class="modal" id="dlg-new-load">
     <form method="dialog" id="form-new-load">

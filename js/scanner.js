@@ -17,7 +17,7 @@ let ctx = null;
 function canHoldFocus() {
   if (!ctx.load) return false;
   if (document.querySelector('dialog[open]')) return false;
-  if ($('#drawer').classList.contains('open')) return false;
+  if (document.querySelector('.drawer.open')) return false;
   const a = document.activeElement;
   if (a && a !== $('#scan-input') && a.matches('input, textarea, select, [contenteditable="true"]')) return false;
   return true;
@@ -55,6 +55,7 @@ export function submitMark(raw, { manual = false } = {}) {
   row?.scrollIntoView({ block: 'nearest' });
   flash(row, isFlagged(item));
   flash($('#scanbar'), isFlagged(item));
+  flash($('#screen-flash'), isFlagged(item));
   return item;
 }
 
@@ -77,7 +78,7 @@ export function renderScanbar() {
 // ---- On-screen keypad ----------------------------------------------------
 
 const DIGITS = ['7', '8', '9', '4', '5', '6', '1', '2', '3'];
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const QWERTY = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 
 let pad = null; // { mode: 'mark' | 'weight', value, resolve }
 
@@ -90,7 +91,8 @@ function renderKeypad() {
   const bottom = weight ? ['.', '0', 'back'] : ['-', '0', 'back'];
   const digits = [...DIGITS, ...bottom].map((k) => (k === 'back' ? keyButton('back', '&#9003;', 'key-fn') : keyButton(k))).join('');
   $('#keypad-digits').innerHTML = digits;
-  $('#keypad-letters').innerHTML = weight ? '' : LETTERS.map((k) => keyButton(k)).join('') + keyButton('clear', 'Clear', 'key-fn key-wide');
+  $('#keypad-letters').innerHTML = weight ? '' : QWERTY.map((row, r) => `<div class="key-row">${
+    [...row].map((k) => keyButton(k)).join('')}${r === 2 ? keyButton('clear', 'Clear', 'key-fn key-wide') : ''}</div>`).join('');
   $('#keypad-letters').hidden = weight;
   $('#dlg-keypad').classList.toggle('keypad-weight', weight);
   renderKeypadValue();

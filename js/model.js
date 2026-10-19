@@ -23,7 +23,7 @@ export function createStack(loadName, index) {
 export function createLoad(name) {
   const now = new Date().toISOString();
   const clean = String(name).trim();
-  return { id: newId(), name: clean, createdAt: now, updatedAt: now, stacks: [createStack(clean, 1)] };
+  return { id: newId(), name: clean, createdAt: now, updatedAt: now, pieceWeights: true, stacks: [createStack(clean, 1)] };
 }
 
 // Builds an item from a scanned or typed mark. Unrecognized marks and manual
@@ -42,6 +42,21 @@ export function createItem(rawMark, { manual = false } = {}) {
     manual,
     scannedAt: new Date().toISOString(),
   };
+}
+
+// Loads saved before v0.4 stored the whole line's assembly weight on matched
+// pieces. Re-reads per-piece weights from the master list once; flagged
+// (hand-weighed) items are left alone. Returns true when the load changed.
+export function refreshPieceWeights(load) {
+  if (!load || load.pieceWeights) return false;
+  for (const s of load.stacks) {
+    for (const it of s.items) {
+      const part = !isFlagged(it) && lookupPart(it.mark);
+      if (part) it.weight = part.weight;
+    }
+  }
+  load.pieceWeights = true;
+  return true;
 }
 
 export function isFlagged(item) {
