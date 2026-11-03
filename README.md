@@ -1,112 +1,52 @@
-# TERRA-loads-web
+# terra-loads-web
 
-Offline-first iPad PWA for structural steel load planning: scan marks against a
-bundled master parts list, group them into stacks within a load, and export or
-print the result. Plain HTML, CSS and JavaScript with no build step.
+A standalone, offline iPad app for planning steel truck loads. Scan piece marks with a barcode
+scanner, group them into stacks on a load, then export a Tekla-friendly text file or print a
+shipping ticket. Everything stays on the iPad; it needs no server and no PowerFab.
 
-## Run locally
+Plain HTML, CSS and JavaScript, no build step. (The PowerFab-connected version, with shared stacks
+across iPads, is [terra-tekla-client](https://github.com/ATagTheAwesomest/terra-tekla-client).)
 
-Any static file server works, served over `http://localhost` or HTTPS
-(service workers need a secure origin):
+## Requirements
+
+- Any static web host on HTTPS (GitHub Pages works); `localhost` is fine for trying it
+- iPad with Safari, and a barcode scanner that sends Enter after each scan (an on-screen keypad
+  works too)
+
+## Install
+
+1. Host the repo on HTTPS. With GitHub Pages: Settings > Pages > Deploy from branch `main`, folder
+   `/ (root)`. It then runs from `https://<user>.github.io/terra-loads-web/`.
+2. Open that address in Safari and wait for the footer to say **Offline ready**.
+3. Share > **Add to Home Screen**, and always open it from the home screen (iOS can clear the data
+   of a plain Safari tab after a week without use).
+
+## Run it on your own computer
 
 ```sh
-python3 -m http.server 8000
-# open http://localhost:8000
+python3 -m http.server 8000     # then open http://localhost:8000
+node --test tests/*.test.mjs    # tests (Node 18+; the drag test uses Playwright if installed)
 ```
 
-## Install on iPad
+## Configure
 
-1. Host the repo on HTTPS. GitHub Pages works: Settings → Pages → Deploy from
-   branch `main`, folder `/ (root)`. All paths are relative, so it runs from
-   `https://<user>.github.io/terra-loads-web/`.
-2. Open the URL in Safari, wait for the footer to say **Offline ready**.
-3. Share → **Add to Home Screen**. Launch from the home screen icon.
+- **Parts list:** replace `data/master_parts.csv` with a new fabrication export (`Main Mk`,
+  `Qty`, `Assembly Weight`, ...; a plain `Mark,Description,Weight` file also works).
+- **Job numbers:** `JOB_NUMBERS` in `js/model.js`. Jobs whose marks have no sequence go in
+  `NO_SEQUENCE_JOBS`.
 
-Installed PWAs keep their storage; iOS can clear site data for un-installed
-Safari tabs after a week of no use, so always run it from the home screen.
+After either change, release an update (below).
 
-## Layout
-
-| Path | What it is |
-| --- | --- |
-| `index.html` | App shell: header stats, workspace, loads drawer, dialogs |
-| `css/app.css` | Dark industrial theme, 48px+ tap targets, print base |
-| `js/app.js` | Boot, rendering, loads drawer, new-load flow, update UI |
-| `js/check.js` | Truck check logic: matches check scans to the load's pieces |
-| `js/check-ui.js` | Truck check screen: checklist, extras, undo and start over |
-| `js/mobile.js` | Phone layout toggle and its own stack/row markup (`css/mobile.css`) |
-| `js/manage.js` | Manage Loads screen: job numbers, open, export, hold-to-delete |
-| `js/hold.js` | Press-and-hold buttons for deletes (item 1.5 s, stack 4 s, load 7.5 s) |
-| `js/model.js` | Pure helpers: create loads/stacks/items, totals, sequences, job numbers |
-| `js/parts.js` | Loads and parses `data/master_parts.csv`, exact-match lookup |
-| `js/store.js` | Persistence: localStorage journal + IndexedDB |
-| `js/updater.js` | Service worker registration, version check, Force Update |
-| `sw.js` | Precaches the app shell, serves cache-first offline |
-| `version.js` | The app version (single source of truth) |
-| `data/master_parts.csv` | Master parts list (fabrication export, see below) |
-
-## Data model
-
-```
-Load  { id, name, job, createdAt, updatedAt, rev, stacks: Stack[] }
-Stack { id, name, items: Item[] }
-Item  { id, mark, description, weight, matched, manual, scannedAt }
-```
-
-Every scan is its own item, in scan order; identical marks are never merged.
-Unmatched or manually entered marks get a trailing `-` and are flagged orange.
-`job` is one of `JOB_NUMBERS` in `js/model.js`, picked when the load is created;
-loads saved before job numbers existed have `job: null` until one is picked on
-the Manage Loads screen. Jobs in `NO_SEQUENCE_JOBS` (26111) show no sequences.
-
-A mark is only unique within a job, so every lookup is job plus mark. The
-master list may carry a `Job` column (`26123` or `26123 - 25-418`); rows with
-no job, like the current file, match a mark on any job.
-
-## Truck check
-
-Menu → **Truck check** turns the open load into a checklist. Each scan checks
-off one piece with the same job and mark; a scan with nothing left to check
-off shows red and is listed under Extras. The check is saved on the load as
-`truckCheck { startedAt, updatedAt, scans: [{ id, mark, manual, scannedAt }] }`;
-which piece each scan ticks is worked out on every read, so editing the load
-afterwards never leaves a stale check. Hold a row's undo button 1.5 s to
-uncheck it, or **Start over** 4 s to clear the check. Printed tickets fill the
-✓ column from the check.
-
-## Phone layout
-
-Menu → **Phone layout** switches this device to a separate phone layout
-(`js/mobile.js` + `css/mobile.css`, all scoped under `body.layout-mobile`).
-It turns on by itself the first time on a phone-sized screen.
-
-## Storage
-
-`store.saveLoad(load)` writes the whole load to a localStorage journal
-synchronously, then commits it to IndexedDB and clears the journal entry. On
-launch, `store.recover()` replays any journal entry newer than its IndexedDB
-copy, so a tab killed mid-save loses nothing. Without IndexedDB (some private
-modes) the journal is the store.
-
-## Releasing an update
+## Update
 
 1. Bump `self.TERRA_VERSION` in `version.js`.
 2. If you added a file, add it to `PRECACHE` in `sw.js`.
 3. Push to `main`.
 
-On launch the app checks `version.js` on the server and shows a **New** badge
-on **Update** when a newer version exists. **Force Update** unregisters the
-service worker, clears the app caches and reloads from the network. Saved loads
-are untouched, and it refuses to run while offline so the app never loses its
-offline copy.
+The iPad shows a **New** badge on Update when a newer version is up; **Update** (or **Force
+Update**) loads it. Saved loads are kept.
 
-## Master parts list
+## More
 
-`data/master_parts.csv` is the fabrication export as-is (`Main Mk`, `Shape`,
-`Dimension`, `Length`, `Grade`, `Qty`, `Ref #`, `Assembly Weight` like
-`581.48#`). Each row shows size, length, grade and ref, uses the assembly
-weight, and shows a running "2 of 4" count against `Qty` (red when over).
-A plain `Mark,Description,Weight` list also works.
-
-To update it, overwrite `data/master_parts.csv` with a new export and bump the
-version. `tests/fixtures/sample_parts.csv` is the small list the tests use.
+[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): what each file does, the data model, truck check,
+phone layout, storage and the parts list format.

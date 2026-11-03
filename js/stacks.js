@@ -9,6 +9,7 @@ import {
   removeStack, renameStack, setActiveStack, setItemWeight,
 } from './ops.js';
 import { focusScanner, openKeypad } from './scanner.js';
+import { startDrag } from './drag.js';
 import { bindHold } from './hold.js';
 
 export const ITEM_HOLD_MS = 1500;
@@ -146,16 +147,7 @@ function completeHold(btn) {
 }
 
 // ---- Drag and drop -------------------------------------------------------
-// Pointer-based so it works with touch on iPad Safari, where HTML5 drag and
-// drop is unreliable.
-
-let drag = null; // { itemId, ghost, pointerId, target, offsetY }
-
-function clearDropMarks() {
-  document.querySelectorAll('.drop-before, .drop-after, .drop-into').forEach((el) => {
-    el.classList.remove('drop-before', 'drop-after', 'drop-into');
-  });
-}
+// The drag itself (ghost, pointer tracking, clean-up) is js/drag.js.
 
 // Where a drop at (x, y) would land: { stackId, index, el, cls } or null.
 function dropTargetAt(x, y) {
@@ -175,51 +167,18 @@ function dropTargetAt(x, y) {
   return { stackId, index: rows.length, el: rows[rows.length - 1] ?? stackEl, cls: rows.length ? 'drop-after' : 'drop-into' };
 }
 
-function startDrag(handle, e) {
+function beginDrag(handle, e) {
   const row = handle.closest('[data-item-id]');
   if (!row) return;
   e.preventDefault();
-  const r = row.getBoundingClientRect();
-  const ghost = row.cloneNode(true);
-  ghost.classList.add('drag-ghost');
-  ghost.style.width = `${r.width}px`;
-  ghost.style.left = `${r.left}px`;
-  ghost.style.top = `${r.top}px`;
-  document.body.appendChild(ghost);
-  row.classList.add('dragging');
-  handle.setPointerCapture?.(e.pointerId);
-  drag = { itemId: row.dataset.itemId, ghost, pointerId: e.pointerId, offsetY: e.clientY - r.top, target: null, lastY: e.clientY };
-  autoScroll();
-}
-
-function moveDrag(e) {
-  if (!drag || e.pointerId !== drag.pointerId) return;
-  drag.ghost.style.top = `${e.clientY - drag.offsetY}px`;
-  drag.lastY = e.clientY;
-  clearDropMarks();
-  drag.target = dropTargetAt(e.clientX, e.clientY);
-  drag.target?.el.classList.add(drag.target.cls);
-}
-
-// Scrolls the workspace while a drag is held near its top or bottom edge.
-function autoScroll() {
-  if (!drag) return;
-  const ws = document.getElementById('workspace');
-  const r = ws.getBoundingClientRect();
-  const edge = 70;
-  if (drag.lastY < r.top + edge) ws.scrollTop -= 12;
-  else if (drag.lastY > r.bottom - edge) ws.scrollTop += 12;
-  requestAnimationFrame(autoScroll);
-}
-
-function endDrag(e, commit = true) {
-  if (!drag || (e && e.pointerId !== drag.pointerId)) return;
-  const { itemId, ghost, target } = drag;
-  drag = null;
-  ghost.remove();
-  clearDropMarks();
-  document.querySelector(`[data-item-id="${itemId}"]`)?.classList.remove('dragging');
-  if (commit && target && moveItemTo(ctx.load, itemId, target.stackId, target.index)) ctx.save();
+  const itemId = row.dataset.itemId;
+  startDrag(row, handle, e, {
+    targetAt: dropTargetAt,
+    scrollEl: document.getElementById('workspace'),
+    onDrop: (target) => {
+      if (moveItemTo(ctx.load, itemId, target.stackId, target.index)) ctx.save();
+    },
+  });
 }
 
 // ---- Wiring --------------------------------------------------------------
@@ -283,13 +242,9 @@ export function initStacks(context) {
   ws.addEventListener('pointerdown', (e) => {
     if (e.target.closest('[data-hold]')) return;
     const handle = e.target.closest('[data-drag]');
-    if (handle) startDrag(handle, e);
+    if (handle) beginDrag(handle, e);
   });
   ws.addEventListener('contextmenu', (e) => {
     if (e.target.closest('[data-drag]')) e.preventDefault();
   });
-
-  document.addEventListener('pointermove', moveDrag);
-  document.addEventListener('pointerup', (e) => endDrag(e));
-  document.addEventListener('pointercancel', (e) => endDrag(e, false));
 }
